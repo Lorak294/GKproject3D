@@ -17,7 +17,7 @@ namespace GKproject3D
             InitializeComponent();
             imageBox.Image = new Bitmap(imageBox.Width, imageBox.Height);
             objects = new List<Object3D>();
-            camera = new Camera(new Vector3(0.0f, 0.7f, 0.7f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0, 1, 0));
+            camera = new Camera(new Vector3(0.9f, 1.0f, 0.7f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0, 1, 0));
 
             objects.Add(new Object3D("../../../objects/treeScaled.obj", Color.Olive));
 
@@ -38,6 +38,11 @@ namespace GKproject3D
             //triList.Add(new Triangle(p2, p3, p4));
             //triList.Add(new Triangle(p3, p1, p4));
             //objects.Add(new Object3D(triList, Color.Black));
+
+
+
+
+            //triList[0].FillOutTest((Bitmap)imageBox.Image);
         }
 
         private void drawObject(Object3D obj)
