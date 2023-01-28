@@ -8,6 +8,8 @@ namespace GKproject3D
     {
         private List<Object3D> objects;
 
+        private float[,] zBufferMark;
+
 
         private Camera camera;
         private const int FOV_DEGREES = 90;
@@ -16,8 +18,13 @@ namespace GKproject3D
         {
             InitializeComponent();
             imageBox.Image = new Bitmap(imageBox.Width, imageBox.Height);
+
+            zBufferMark = new float[imageBox.Width, imageBox.Height];
+            ResetZBuffer();
+            
+
             objects = new List<Object3D>();
-            camera = new Camera(new Vector3(0.7f, 1.0f, 0.7f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0, 1, 0));
+            camera = new Camera(new Vector3(0.5f, 0.5f, 0.8f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0, 1, 0));
 
             objects.Add(new Object3D("../../../objects/treeScaled.obj", Color.Olive));
 
@@ -68,27 +75,37 @@ namespace GKproject3D
 
 
 
-            obj.Draw(imageBox.Image, M,imageBox.Width,imageBox.Height);
+            obj.Draw(imageBox.Image, M,imageBox.Width,imageBox.Height,zBufferMark, camera);
 
 
 
-            Point3D middlePoint = new Point3D(new Vector4(0, 0, 0, 1), new Vector3(1, 0, 0));
+            //Point3D middlePoint = new Point3D(new Vector4(0, 0, 0, 1), new Vector3(1, 0, 0));
 
-            var midPos = middlePoint.getScreenPosition(M, imageBox.Width, imageBox.Height);
-            using (Graphics g = Graphics.FromImage(imageBox.Image))
-            {
-                g.DrawEllipse(Pens.Red, midPos.X - 1.0f, midPos.Y - 1.0f, 2, 2);
-            }
-
+            //var midPos = middlePoint.getScreenPosition(M, imageBox.Width, imageBox.Height);
+            //using (Graphics g = Graphics.FromImage(imageBox.Image))
+            //{
+            //    g.DrawEllipse(Pens.Red, midPos.X - 1.0f, midPos.Y - 1.0f, 2, 2);
+            //}
 
             imageBox.Refresh();
 
         }
 
+        private void ResetZBuffer()
+        {
+           for(int i=0; i<zBufferMark.GetLength(0); i++)
+           {
+                for(int j=0; j<zBufferMark.GetLength(1); j++)
+                {
+                    zBufferMark[i,j] = 1000.0f;
+                }
+           }
+        }
+
+
         private void button1_Click(object sender, EventArgs e)
         {
            drawObject(objects[0]);
-
         }
     }
 }
