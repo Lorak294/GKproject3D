@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Numerics;
 using System.Globalization;
 using System.Security.Cryptography.Pkcs;
+using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
 
 namespace GKproject3D
 {
@@ -19,6 +21,16 @@ namespace GKproject3D
         {
             this.position = positon;
             this.normal = normal;
+        }
+
+        public Point3D Copy()
+        {
+            return new Point3D(position, normal);
+        }
+
+        public Vector3 getPositionV3()
+        {
+            return new Vector3(position.X, position.Y, position.Z);
         }
 
         public Vector4 getNDCPosition(Matrix4x4 matrix)
@@ -49,6 +61,8 @@ namespace GKproject3D
               this.normal
               );
         }
+
+
 
     }
     public class Triangle
@@ -133,37 +147,52 @@ namespace GKproject3D
         {
             // p0.Y == p1.Y and p0.X <= p1.X
 
-            float invSlope0 = (screenPoints[2].position.X - screenPoints[0].position.X) / (screenPoints[2].position.Y - screenPoints[0].position.Y);
-            float invSlope1 = (screenPoints[2].position.X - screenPoints[1].position.X) / (screenPoints[2].position.Y - screenPoints[1].position.Y);
+            float dy = screenPoints[2].position.Y - screenPoints[0].position.Y;
 
-            float curX0 = screenPoints[0].position.X;
-            float curX1 = curX0;
+            Vector4 positionStep0 = (screenPoints[2].position - screenPoints[0].position) / dy;
+            Vector4 positionStep1 = (screenPoints[2].position - screenPoints[1].position) / dy;
+            Vector3 normalStep0 = (screenPoints[2].normal - screenPoints[0].normal) / dy;
+            Vector3 normalStep1 = (screenPoints[2].normal - screenPoints[1].normal) / dy;
+
+            Point3D edge0point = screenPoints[0].Copy();
+            Point3D edge1point = screenPoints[1].Copy();
 
             int lowY = (int)screenPoints[0].position.Y;
             int topY = (int)Math.Round(screenPoints[2].position.Y);
 
             if (topY > canvas.Height) topY = canvas.Height;
+            
+            
             for (int scanlineY = lowY; scanlineY <= topY; scanlineY++)
             {
-
                 // fill scanline
                 if(scanlineY >= 0)
-                    FillScanline((int)curX0, (int)curX1, scanlineY, canvas);
-                curX0 += invSlope0;
-                curX1 += invSlope1;
+                    FillScanline(edge0point, edge1point, scanlineY, canvas);
+
+                // update values forn next iteration
+                edge0point.position += positionStep0;
+                edge1point.position += positionStep1;
+                edge0point.normal += normalStep0;
+                edge1point.normal += normalStep1;
+
             }
         }
         private void BottomSharpCase(Point3D[] screenPoints, Bitmap canvas)
         {
             // p0.Y < p1.Y <= p2.Y
 
-            float invSlope1 = (screenPoints[1].position.X - screenPoints[0].position.X) / (screenPoints[1].position.Y - screenPoints[0].position.Y);
-            float invSlope2 = (screenPoints[2].position.X - screenPoints[0].position.X) / (screenPoints[2].position.Y - screenPoints[0].position.Y);
+            float dy1 = screenPoints[1].position.Y - screenPoints[0].position.Y;
+            float dy2 = screenPoints[2].position.Y - screenPoints[0].position.Y;
 
-            bool leftSideP1 = invSlope1 < invSlope2;
+            Point3D edgePoint1 = screenPoints[0].Copy();
+            Point3D edgePoint2 = screenPoints[0].Copy();
 
-            float curX1 = screenPoints[0].position.X;
-            float curX2 = curX1;
+            Vector4 positionStep1 = (screenPoints[1].position - screenPoints[0].position) / dy1;
+            Vector4 positionStep2 = (screenPoints[2].position - screenPoints[0].position) / dy2;
+            Vector3 normalStep1 = (screenPoints[1].normal - screenPoints[0].normal) / dy1;
+            Vector3 normalStep2 = (screenPoints[2].normal - screenPoints[0].normal) / dy2;
+
+            bool leftSideP1 = positionStep1.X < positionStep2.X;
 
             int lowY = (int)screenPoints[0].position.Y;
             int topY = (int)Math.Round(screenPoints[1].position.Y);
@@ -176,13 +205,15 @@ namespace GKproject3D
                 if(scanlineY > 0)
                 {
                     if(leftSideP1)
-                        FillScanline((int)curX1, (int)curX2, scanlineY, canvas);
+                        FillScanline(edgePoint1, edgePoint2, scanlineY, canvas);
                     else
-                        FillScanline((int)curX2, (int)curX1, scanlineY, canvas);
+                        FillScanline(edgePoint2, edgePoint1, scanlineY, canvas);
                 }
-
-                curX1 += invSlope1;
-                curX2 += invSlope2;
+                // appply steps
+                edgePoint1.position += positionStep1;
+                edgePoint1.normal += normalStep1;
+                edgePoint2.position += positionStep2;
+                edgePoint2.normal += normalStep2;
             }
 
             if (screenPoints[1].position.Y == screenPoints[2].position.Y)
@@ -190,36 +221,56 @@ namespace GKproject3D
 
 
             // top half
-            invSlope1 = (screenPoints[2].position.X - screenPoints[1].position.X) / (screenPoints[2].position.Y - screenPoints[1].position.Y);
+            dy1 = screenPoints[2].position.Y - screenPoints[1].position.Y;
+            positionStep1 = (screenPoints[2].position - screenPoints[1].position) / dy1;
+            normalStep1 = (screenPoints[2].normal - screenPoints[1].normal) / dy1;
+            
             topY = (int)Math.Round(screenPoints[2].position.Y);
 
-            curX1 = screenPoints[1].position.X;
+            edgePoint1 = screenPoints[1].Copy();
 
             if (topY > canvas.Height) topY = canvas.Height;
+            
             for (; scanlineY <= topY; scanlineY++)
             {
                 // fill scanline
                 if (scanlineY > 0)
                 {
                     if (leftSideP1)
-                        FillScanline((int)curX1, (int)curX2, scanlineY, canvas);
+                        FillScanline(edgePoint1, edgePoint2, scanlineY, canvas);
                     else
-                        FillScanline((int)curX2, (int)curX1, scanlineY, canvas);
+                        FillScanline(edgePoint2, edgePoint1, scanlineY, canvas);
                 }
-                curX1 += invSlope1;
-                curX2 += invSlope2;
+                // appply steps
+                edgePoint1.position += positionStep1;
+                edgePoint1.normal += normalStep1;
+                edgePoint2.position += positionStep2;
+                edgePoint2.normal += normalStep2;
             }
         }
-        public void FillScanline( int startX, int endX, int y, Bitmap canvas)
+        public void FillScanline( Point3D leftPoint, Point3D rightPoint, int y, Bitmap canvas)
         {
             // ADD INTERPOLATION 
             Color c = Color.Red;
-            for (int x = Math.Max(0,startX); x < Math.Min(endX,canvas.Width); x++)
+            for (int x = (int)Math.Max(0, leftPoint.position.X); x < Math.Min(rightPoint.position.X,canvas.Width); x++)
             {
                 canvas.SetPixel(x, y, c);
             }
         }
+        
+        public void testFill(Bitmap canvas)
+        {
+            Point3D[] testTrig = new Point3D[3]
+            {
+                new Point3D(new Vector4(10,10,1,1),new Vector3(0,1,0)),
+                new Point3D(new Vector4(100,10,1,1),new Vector3(0,1,0)),
+                new Point3D(new Vector4(30,100,1,1),new Vector3(0,1,0))
+            };
 
+            FillOut(testTrig, canvas);
+            
+
+        }
     }
     public class Object3D
     {
@@ -374,4 +425,5 @@ namespace GKproject3D
 
         }
     }
+
 }
