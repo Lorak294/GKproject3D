@@ -8,6 +8,7 @@ namespace GKproject3D
     {
         private List<Object3D> objects;
 
+        private LockBitmap lockBitmap;
         private float[,] zBufferMark;
 
 
@@ -18,15 +19,18 @@ namespace GKproject3D
         {
             InitializeComponent();
             imageBox.Image = new Bitmap(imageBox.Width, imageBox.Height);
+            lockBitmap = new LockBitmap((Bitmap)imageBox.Image);
 
             zBufferMark = new float[imageBox.Width, imageBox.Height];
             ResetZBuffer();
             
 
             objects = new List<Object3D>();
-            camera = new Camera(new Vector3(0.5f, 0.5f, 0.8f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0, 1, 0));
+            camera = new Camera(new Vector3(2.5f, 0.5f, 0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0, 1, 0));
 
             objects.Add(new Object3D("../../../objects/treeScaled.obj", Color.Olive));
+            objects.Add(new Object3D("../../../objects/carScaled.obj", Color.Red));
+            //objects.Add(new Object3D("../../../objects/treeScaled.obj", Color.Olive));
 
 
 
@@ -53,11 +57,14 @@ namespace GKproject3D
             //imageBox.Refresh();
         }
 
-        private void drawObject(Object3D obj)
+
+        private void renderScene()
         {
+            ResetZBuffer();
             // MODEL
             //Matrix4x4 modelM = Matrix4x4.CreateTranslation(0, 0, -0.5f);
-            Matrix4x4 modelM = Matrix4x4.Identity;
+            Matrix4x4 modelCar = Matrix4x4.CreateScale(0.5f) * Matrix4x4.CreateTranslation(0.5f, 0, 0);
+            Matrix4x4 modelTree = Matrix4x4.CreateTranslation(-0.5f, 0, 0);
             //Matrix4x4 modelM = Matrix4x4.CreateScale(2);
 
             // VIEW
@@ -70,25 +77,16 @@ namespace GKproject3D
             float f = 100;
             Matrix4x4 projectionM = Matrix4x4.CreatePerspectiveFieldOfView(fov, aspectRatio, n, f);
 
+            Matrix4x4 VP = viewM * projectionM;
+            
+            Matrix4x4 Mcar = modelCar * VP;
+            Matrix4x4 Mtree = modelTree * VP;
 
-            Matrix4x4 M = modelM * viewM * projectionM;
-
-
-
-            obj.Draw(imageBox.Image, M,imageBox.Width,imageBox.Height,zBufferMark, camera);
-
-
-
-            //Point3D middlePoint = new Point3D(new Vector4(0, 0, 0, 1), new Vector3(1, 0, 0));
-
-            //var midPos = middlePoint.getScreenPosition(M, imageBox.Width, imageBox.Height);
-            //using (Graphics g = Graphics.FromImage(imageBox.Image))
-            //{
-            //    g.DrawEllipse(Pens.Red, midPos.X - 1.0f, midPos.Y - 1.0f, 2, 2);
-            //}
-
+            lockBitmap.LockBits();
+            objects[0].Draw(lockBitmap, Mtree, imageBox.Width, imageBox.Height, zBufferMark, camera);
+            objects[1].Draw(lockBitmap, Mcar, imageBox.Width, imageBox.Height, zBufferMark, camera);
+            lockBitmap.UnlockBits();
             imageBox.Refresh();
-
         }
 
         private void ResetZBuffer()
@@ -105,7 +103,8 @@ namespace GKproject3D
 
         private void button1_Click(object sender, EventArgs e)
         {
-           drawObject(objects[0]);
+            //drawObject(objects[0]);
+            renderScene();
         }
     }
 }

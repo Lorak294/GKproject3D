@@ -89,10 +89,11 @@ namespace GKproject3D
 
         public bool CheckBackFaceCulling(Camera camera)
         {
-            return Vector3.Dot(points[0].getPositionV3() - camera.Position, points[0].normal) >= 0;
+            Vector3 v = points[0].getPositionV3() - camera.Position;
+            return Vector3.Dot(v, points[0].normal) >= 0 && Vector3.Dot(v, points[1].normal) >= 0 && Vector3.Dot(v, points[2].normal) >= 0;
         }
 
-        public void Draw(Image image, Matrix4x4 matrix, float screenWidth, float screenHeight, float[,] zBufferMark)
+        public void Draw(LockBitmap lockBitmap, Matrix4x4 matrix, float screenWidth, float screenHeight, float[,] zBufferMark)
         {
             Vector4 p0_ndc = points[0].getNDCPosition(matrix);
             Vector4 p1_ndc = points[1].getNDCPosition(matrix);
@@ -110,13 +111,13 @@ namespace GKproject3D
             screenPoints[1] = points[1].getScreenPosition(p1_ndc, screenWidth, screenHeight);
             screenPoints[2] = points[2].getScreenPosition(p2_ndc, screenWidth, screenHeight);
 
-            FillOut(screenPoints, (Bitmap)image, zBufferMark);
+            FillOut(screenPoints, lockBitmap, zBufferMark);
         }
 
 
 
         // SCAN LINE FILLING ALGHORITM
-        public void FillOut(Point3D[] screenPoints, Bitmap canvas, float[,] zBufferMark)
+        public void FillOut(Point3D[] screenPoints, LockBitmap lockBitmap, float[,] zBufferMark)
         {
             // order verts ascending by Y than ascending by X
             Array.Sort(screenPoints, 
@@ -133,14 +134,14 @@ namespace GKproject3D
 
             if (screenPoints[0].position.Y == screenPoints[1].position.Y)
             {
-                BottomFlatCase(screenPoints, canvas, zBufferMark);
+                BottomFlatCase(screenPoints, lockBitmap, zBufferMark);
             }
             else
             {
-                BottomSharpCase(screenPoints, canvas, zBufferMark);
+                BottomSharpCase(screenPoints, lockBitmap, zBufferMark);
             }
         }
-        private void BottomFlatCase(Point3D[] screenPoints, Bitmap canvas, float[,] zBufferMark)
+        private void BottomFlatCase(Point3D[] screenPoints, LockBitmap lockBitmap, float[,] zBufferMark)
         {
             // p0.Y == p1.Y and p0.X <= p1.X
 
@@ -157,14 +158,14 @@ namespace GKproject3D
             int lowY = (int)screenPoints[0].position.Y;
             int topY = (int)Math.Round(screenPoints[2].position.Y);
 
-            if (topY > canvas.Height) topY = canvas.Height;
+            if (topY > lockBitmap.Height) topY = lockBitmap.Height;
             
             
             for (int scanlineY = lowY; scanlineY <= topY; scanlineY++)
             {
                 // fill scanline
                 if(scanlineY >= 0)
-                    FillScanline(edge0point, edge1point, scanlineY, canvas, zBufferMark);
+                    FillScanline(edge0point, edge1point, scanlineY, lockBitmap, zBufferMark);
 
                 // update values forn next iteration
                 edge0point.position += positionStep0;
@@ -174,7 +175,7 @@ namespace GKproject3D
 
             }
         }
-        private void BottomSharpCase(Point3D[] screenPoints, Bitmap canvas, float[,] zBufferMark)
+        private void BottomSharpCase(Point3D[] screenPoints, LockBitmap lockBitmap, float[,] zBufferMark)
         {
             // p0.Y < p1.Y <= p2.Y
 
@@ -194,7 +195,7 @@ namespace GKproject3D
             int lowY = (int)screenPoints[0].position.Y;
             int topY = (int)Math.Round(screenPoints[1].position.Y);
             
-            if(topY > canvas.Height) topY = canvas.Height;
+            if(topY > lockBitmap.Height) topY = lockBitmap.Height;
             int scanlineY;
             for (scanlineY = lowY; scanlineY <= topY; scanlineY++)
             {
@@ -202,9 +203,9 @@ namespace GKproject3D
                 if(scanlineY > 0)
                 {
                     if(leftSideP1)
-                        FillScanline(edgePoint1, edgePoint2, scanlineY, canvas, zBufferMark);
+                        FillScanline(edgePoint1, edgePoint2, scanlineY, lockBitmap, zBufferMark);
                     else
-                        FillScanline(edgePoint2, edgePoint1, scanlineY, canvas, zBufferMark);
+                        FillScanline(edgePoint2, edgePoint1, scanlineY, lockBitmap, zBufferMark);
                 }
                 // appply steps
                 edgePoint1.position += positionStep1;
@@ -226,7 +227,7 @@ namespace GKproject3D
 
             edgePoint1 = screenPoints[1].Copy();
 
-            if (topY > canvas.Height) topY = canvas.Height;
+            if (topY > lockBitmap.Height) topY = lockBitmap.Height;
             
             for (; scanlineY <= topY; scanlineY++)
             {
@@ -234,9 +235,9 @@ namespace GKproject3D
                 if (scanlineY > 0)
                 {
                     if (leftSideP1)
-                        FillScanline(edgePoint1, edgePoint2, scanlineY, canvas, zBufferMark);
+                        FillScanline(edgePoint1, edgePoint2, scanlineY, lockBitmap, zBufferMark);
                     else
-                        FillScanline(edgePoint2, edgePoint1, scanlineY, canvas, zBufferMark);
+                        FillScanline(edgePoint2, edgePoint1, scanlineY, lockBitmap, zBufferMark);
                 }
                 // appply steps
                 edgePoint1.position += positionStep1;
@@ -245,7 +246,7 @@ namespace GKproject3D
                 edgePoint2.normal += normalStep2;
             }
         }
-        public void FillScanline( Point3D leftPoint, Point3D rightPoint, int y, Bitmap canvas, float[,] zBufferMark)
+        public void FillScanline( Point3D leftPoint, Point3D rightPoint, int y, LockBitmap lockBitmap, float[,] zBufferMark)
         {
             // ADD INTERPOLATION 
             Color c = Color.Red;
@@ -256,11 +257,11 @@ namespace GKproject3D
 
             float zBuff = leftPoint.position.Z;
             Vector3 normVec = leftPoint.normal;
-            for (int x = (int)Math.Max(0, leftPoint.position.X); x < Math.Min(rightPoint.position.X,canvas.Width); x++)
+            for (int x = (int)Math.Max(0, leftPoint.position.X); x < Math.Min(rightPoint.position.X,lockBitmap.Width); x++)
             {
                 if (zBufferMark[x,y] > zBuff)
                 {
-                    canvas.SetPixel(x, y, NormalVectorToColor(Vector3.Normalize(normVec)));
+                    lockBitmap.SetPixel(x, y, NormalVectorToColor(Vector3.Normalize(normVec)));
                     zBufferMark[x,y] = zBuff;
                 }
                     
@@ -280,7 +281,7 @@ namespace GKproject3D
             return Color.FromArgb(r,g,b);
         }
 
-        public void testFill(Bitmap canvas, float[,] zBufferMark)
+        public void testFill(LockBitmap lockBitmap, float[,] zBufferMark)
         {
             Point3D[] testTrig = new Point3D[3]
             {
@@ -289,7 +290,7 @@ namespace GKproject3D
                 new Point3D(new Vector4(30,100,1,1),new Vector3(0,1,0))
             };
 
-            FillOut(testTrig, canvas, zBufferMark);
+            FillOut(testTrig, lockBitmap, zBufferMark);
             
 
         }
@@ -355,12 +356,13 @@ namespace GKproject3D
             }
 
             // importing figures
-            while (lineStr != null && lineStr.StartsWith('f'))
+            while (lineStr != null)
             {
                 //Debug.WriteLine(lineStr);
                 try
                 {
-                    triangles.Add(ParseTriangle(lineStr, vertList, normVectorList));
+                    if(lineStr.StartsWith('f'))
+                        triangles.Add(ParseTriangle(lineStr, vertList, normVectorList));
                 }
                 catch (Exception ex)
                 {
@@ -414,6 +416,8 @@ namespace GKproject3D
         {
             List<Point3D> selectedVerts = new List<Point3D>();
 
+            
+
             string[] args = figureStr.Split(' ');
 
             foreach (string arg in args)
@@ -438,12 +442,12 @@ namespace GKproject3D
 
 
         // DRAW
-        public void Draw(Image image, Matrix4x4 matrix, float screenWidth, float screenHeight, float[,] zBufferMark, Camera camera)
+        public void Draw(LockBitmap lockBitmap, Matrix4x4 matrix, float screenWidth, float screenHeight, float[,] zBufferMark, Camera camera)
         {
             foreach(Triangle t in triangles)
             {
                 if(!t.CheckBackFaceCulling(camera))
-                    t.Draw(image, matrix, screenWidth, screenHeight, zBufferMark);
+                    t.Draw(lockBitmap, matrix, screenWidth, screenHeight, zBufferMark);
             }
 
         }
