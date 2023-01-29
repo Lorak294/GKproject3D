@@ -8,6 +8,7 @@ namespace GKproject3D
     {
         private List<Object3D> objects;
 
+        private LockBitmap lockBitmap;
         private float[,] zBufferMark;
 
 
@@ -18,47 +19,26 @@ namespace GKproject3D
         {
             InitializeComponent();
             imageBox.Image = new Bitmap(imageBox.Width, imageBox.Height);
+            lockBitmap = new LockBitmap((Bitmap)imageBox.Image);
 
             zBufferMark = new float[imageBox.Width, imageBox.Height];
             ResetZBuffer();
             
 
             objects = new List<Object3D>();
-            camera = new Camera(new Vector3(0.5f, 0.5f, 0.8f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0, 1, 0));
+            camera = new Camera(new Vector3(-1.7f, 0.5f, -2.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0, 1, 0));
 
             objects.Add(new Object3D("../../../objects/treeScaled.obj", Color.Olive));
-
-
-
-
-
-            //List<Triangle> triList = new List<Triangle>();
-            //Point3D p1 = new Point3D(new Vector4(-A, -A, 0, 1), new Vector3(1, 1, 1));
-            //Point3D p2 = new Point3D(new Vector4(A, -A, 0, 1), new Vector3(1, 1, 1));
-            //Point3D p3 = new Point3D(new Vector4(0, A, 0, 1), new Vector3(1, 1, 1));
-            //Point3D p4 = new Point3D(new Vector4(0, 0, A, 1), new Vector3(1, 1, 1));
-
-
-
-            //triList.Add(new Triangle(p1, p2, p3));
-            //triList.Add(new Triangle(p1, p2, p4));
-            //triList.Add(new Triangle(p2, p3, p4));
-            //triList.Add(new Triangle(p3, p1, p4));
-            //objects.Add(new Object3D(triList, Color.Black));
-
-
-
-
-            //triList[0].testFill((Bitmap)imageBox.Image);
-            //imageBox.Refresh();
+            objects.Add(new Object3D("../../../objects/carScaled.obj", Color.Red));
         }
 
-        private void drawObject(Object3D obj)
+
+        private void renderScene()
         {
+            ResetZBuffer();
             // MODEL
-            //Matrix4x4 modelM = Matrix4x4.CreateTranslation(0, 0, -0.5f);
-            Matrix4x4 modelM = Matrix4x4.Identity;
-            //Matrix4x4 modelM = Matrix4x4.CreateScale(2);
+            Matrix4x4 treeModelM = Matrix4x4.Identity;
+            Matrix4x4 carModelM = Matrix4x4.CreateScale(0.4f) * Matrix4x4.CreateTranslation(1.0f, 0, 0);
 
             // VIEW
             Matrix4x4 viewM = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.UpVector);
@@ -70,25 +50,11 @@ namespace GKproject3D
             float f = 100;
             Matrix4x4 projectionM = Matrix4x4.CreatePerspectiveFieldOfView(fov, aspectRatio, n, f);
 
-
-            Matrix4x4 M = modelM * viewM * projectionM;
-
-
-
-            obj.Draw(imageBox.Image, M,imageBox.Width,imageBox.Height,zBufferMark, camera);
-
-
-
-            //Point3D middlePoint = new Point3D(new Vector4(0, 0, 0, 1), new Vector3(1, 0, 0));
-
-            //var midPos = middlePoint.getScreenPosition(M, imageBox.Width, imageBox.Height);
-            //using (Graphics g = Graphics.FromImage(imageBox.Image))
-            //{
-            //    g.DrawEllipse(Pens.Red, midPos.X - 1.0f, midPos.Y - 1.0f, 2, 2);
-            //}
-
+            lockBitmap.LockBits();
+            objects[0].Draw(lockBitmap, treeModelM, viewM, projectionM, zBufferMark, camera);
+            objects[1].Draw(lockBitmap, carModelM, viewM, projectionM, zBufferMark, camera);
+            lockBitmap.UnlockBits();
             imageBox.Refresh();
-
         }
 
         private void ResetZBuffer()
@@ -105,7 +71,7 @@ namespace GKproject3D
 
         private void button1_Click(object sender, EventArgs e)
         {
-           drawObject(objects[0]);
+            renderScene();
         }
     }
 }
