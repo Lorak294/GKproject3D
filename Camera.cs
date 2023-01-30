@@ -7,11 +7,23 @@ using System.Threading.Tasks;
 
 namespace GKproject3D
 {
+    public enum CameraMode
+    {
+        Static,
+        Follow,
+        Behind
+    }
     public class Camera
     {
-        public Vector3 Position { get; private set; }
-        public Vector3 Target { get; private set; }
+        public Vector3 Position { get; set; }
+        public Vector3 Target { get; set; }
         public Vector3 UpVector { get; private set; }
+        public CameraMode Mode { get; set; }
+
+        public float FOV { get; set; }
+        public float N { get; set; }
+        public float F { get; set; }
+        public float AspectRatio { get; set; }
 
         public Vector3 ZAxis
         {
@@ -20,7 +32,6 @@ namespace GKproject3D
                 return Vector3.Normalize(Position - Target);
             }
         }
-
         public Vector3 XAxis
         {
             get
@@ -28,7 +39,6 @@ namespace GKproject3D
                 return Vector3.Normalize(Vector3.Multiply(UpVector, ZAxis));
             }
         }
-
         public Vector3 YAxis
         {
             get
@@ -37,21 +47,16 @@ namespace GKproject3D
             }
         }
 
-        public Camera(Vector3 position, Vector3 target, Vector3 upVector)
+        public Camera(Vector3 position, Vector3 target, Vector3 upVector, float fov, float n, float f, float aspectRatio)
         {
             this.Position = position;
             this.Target = target;
             this.UpVector = upVector;
-        }
-
-        public void LookAt(Vector3 target)
-        {
-            Target = target;
-        }
-
-        public void MoveTo(Vector3 position)
-        {
-            Position = position;
+            FOV = fov;
+            N = n;
+            F = f;
+            AspectRatio = aspectRatio;
+            Mode = CameraMode.Static;
         }
 
     }
