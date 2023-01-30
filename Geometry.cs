@@ -151,7 +151,7 @@ namespace GKproject3D
             int lowY = (int)screenPoints[0].Position.Y;
             int topY = (int)Math.Round(screenPoints[2].Position.Y);
 
-            if (topY > lockBitmap.Height) topY = lockBitmap.Height;
+            if (topY >= lockBitmap.Height) topY = lockBitmap.Height-1;
 
             for (int scanlineY = lowY; scanlineY <= topY; scanlineY++)
             {
@@ -187,7 +187,7 @@ namespace GKproject3D
             int lowY = (int)screenPoints[0].Position.Y;
             int topY = (int)Math.Round(screenPoints[1].Position.Y);
 
-            if (topY > lockBitmap.Height) topY = lockBitmap.Height;
+            if (topY >= lockBitmap.Height) topY = lockBitmap.Height-1;
             int scanlineY;
             for (scanlineY = lowY; scanlineY <= topY; scanlineY++)
             {
@@ -219,7 +219,7 @@ namespace GKproject3D
 
             edgePoint1 = screenPoints[1].Copy();
 
-            if (topY > lockBitmap.Height) topY = lockBitmap.Height;
+            if (topY >= lockBitmap.Height) topY = lockBitmap.Height-1;
 
             for (; scanlineY <= topY; scanlineY++)
             {
@@ -272,166 +272,46 @@ namespace GKproject3D
 
             return Color.FromArgb(r, g, b);
         }
+
+        //public void UpdateWorldPosition(Matrix4x4 matrix)
+        //{
+        //    foreach
+        //}
     }
     public class Object3D
     {
         private List<Triangle> triangles;
         private Color color;
         private Vector3 position;
+        private Vector3 frontVec;
+        public Vector3 WorldPosition { get; private set; }
+        public Vector3 WorldFrontVec { get; private set; }
+        public Matrix4x4 modelMatrix { get; set; }
 
         // constructor
-        public Object3D(List<Triangle> triangles, Color c)
+        public Object3D(List<Triangle> triangles, Color c, Matrix4x4 modelMatrix)
         {
             this.triangles = triangles;
             this.color = c;
-            position = new Vector3(0,0,0);
+            this.modelMatrix = modelMatrix;
+            position = triangles[0].Points[0].Position;
+            frontVec = new Vector3(0,0,-1);
         }
-
-        
-        
-        // OBJ FILE IMPORT CONSTRUCTOR
-        public Object3D(string filepath, Color c)
-        {
-            position = new Vector3(0, 0, 0);
-            color = c;
-
-            List<Vector3> vertList = new List<Vector3>();
-            List<Vector3> normVectorList = new List<Vector3>();
-            triangles = new List<Triangle>();
-
-            FileStream fs = new FileStream(filepath, FileMode.Open, FileAccess.Read);
-            StreamReader sr = new StreamReader(fs);
-            sr.BaseStream.Seek(0, SeekOrigin.Begin);
-
-            string lineStr = sr.ReadLine()!;
-
-            // importing verts and normal vectors
-            while (lineStr != null && !lineStr.StartsWith('f'))
-            {
-                try
-                {
-                    if (lineStr.StartsWith("vt"))
-                    {
-                        lineStr = sr.ReadLine()!;
-                        continue;
-                    }
-                    if (lineStr.StartsWith("vn"))
-                    {
-                        normVectorList.Add(ParseNormVector(lineStr));
-                    }
-                    else if (lineStr.StartsWith("v"))
-                    {
-                        vertList.Add(ParseVertex(lineStr));
-                    }
-                    lineStr = sr.ReadLine()!;
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message);
-                    return;
-                }
-
-            }
-
-            // importing figures
-            while (lineStr != null)
-            {
-                //Debug.WriteLine(lineStr);
-                try
-                {
-                    if(lineStr.StartsWith('f'))
-                        triangles.Add(ParseTriangle(lineStr, vertList, normVectorList));
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message);
-                    return;
-                }
-
-                lineStr = sr.ReadLine()!;
-            }
-
-            sr.Close();
-            fs.Close();
-        }
-        private Vector3 ParseVertex(string normVectorStr)
-        {
-            string[] args = normVectorStr.Split(' ');
-
-            if (args[0] != "v")
-                throw new ArgumentException("Wrong string psssed to Vertex Parser.");
-
-            float x, y, z;
-
-            if (!float.TryParse(args[1], NumberStyles.Any, CultureInfo.InvariantCulture, out x))
-                throw new ArgumentException("Wrong string psssed to Vertex Parser.");
-            if (!float.TryParse(args[2], NumberStyles.Any, CultureInfo.InvariantCulture, out y))
-                throw new ArgumentException("Wrong string psssed to Vertex Parser.");
-            if (!float.TryParse(args[3], NumberStyles.Any, CultureInfo.InvariantCulture, out z))
-                throw new ArgumentException("Wrong string psssed to Vertex Parser.");
-
-            return new Vector3(x, y, z);
-        }
-        private Vector3 ParseNormVector(string normVectorStr)
-        {
-            string[] args = normVectorStr.Split(' ');
-
-            if (args[0] != "vn")
-                throw new ArgumentException("Wrong string psssed to Norm Vector Parser.");
-
-            float x, y, z;
-
-            if (!float.TryParse(args[1], NumberStyles.Any, CultureInfo.InvariantCulture, out x))
-                throw new ArgumentException("Wrong string psssed to Norm Vector Parser.");
-            if (!float.TryParse(args[2], NumberStyles.Any, CultureInfo.InvariantCulture, out y))
-                throw new ArgumentException("Wrong string psssed to Norm Vector Parser.");
-            if (!float.TryParse(args[3], NumberStyles.Any, CultureInfo.InvariantCulture, out z))
-                throw new ArgumentException("Wrong string psssed to Norm Vector Parser.");
-
-            return new Vector3(x, y, z);
-        }
-        private Triangle ParseTriangle(string figureStr, List<Vector3> vertList, List<Vector3> normVectorList)
-        {
-            List<Point3D> selectedVerts = new List<Point3D>();
-
-            
-
-            string[] args = figureStr.Split(' ');
-
-            foreach (string arg in args)
-            {
-                if (arg == "f")
-                    continue;
-
-                string[] vertArg = arg.Split('/');
-
-                int vertIdx, normVectorIdx;
-
-                if (!(int.TryParse(vertArg[0], out vertIdx) && int.TryParse(vertArg[2], out normVectorIdx)))
-                {
-                    throw new ArgumentException("wrong string - int parsing problem");
-                }
-
-                selectedVerts.Add(new Point3D(vertList[vertIdx - 1], normVectorList[normVectorIdx - 1]));
-            }
-
-            return new Triangle(selectedVerts);
-        }
-
 
         // DRAW
-        public void Calculate(LockBitmap lockBitmap, Matrix4x4 modelM, Matrix4x4 viewM, Matrix4x4 projectionM, float[,] zBufferMark, Camera camera)
+        public void Calculate(LockBitmap lockBitmap, Matrix4x4 viewM, Matrix4x4 projectionM, float[,] zBufferMark, Camera camera)
         {
-            foreach(Triangle t in triangles)
-            {
-                t.BackFaced = !t.CheckBackFaceCulling(camera);
-                if (t.BackFaced)
-                    continue;
+            Vector4 v4Pos = new Vector4(position, 1);
+            v4Pos = Vector4.Transform(v4Pos, modelMatrix);
+            WorldPosition = new Vector3(v4Pos.X, v4Pos.Y, v4Pos.Z);
+            WorldFrontVec = Vector3.TransformNormal(frontVec, modelMatrix);
 
+            foreach (Triangle t in triangles)
+            {
                 for (int i=0; i< t.Points.Length; i++)
                 {
                     Vector4 v4 = new Vector4(t.Points[i].Position, 1);
-                    v4 = Vector4.Transform(v4, modelM);
+                    v4 = Vector4.Transform(v4, modelMatrix);
                     t.Points[i].WorldPosition = new Vector3(v4.X, v4.Y, v4.Z);
                     v4 = Vector4.Transform(v4, viewM);
                     v4 = Vector4.Transform(v4, projectionM);
@@ -444,19 +324,22 @@ namespace GKproject3D
                         (float)Math.Round((1 - t.Points[i].NDCPosition.Y) * lockBitmap.Height / 2),
                         (t.Points[i].NDCPosition.Z + 1) / 2);
 
-                    t.Points[i].WorldNormal = Vector3.TransformNormal(t.Points[i].Normal, modelM);
+                    t.Points[i].WorldNormal = Vector3.TransformNormal(t.Points[i].Normal, modelMatrix);
                 }
             }
         }
 
-        public void Draw(LockBitmap lockBitmap, Matrix4x4 modelM, Matrix4x4 viewM, Matrix4x4 projectionM, float[,] zBufferMark, Camera camera)
+        public void Draw(LockBitmap lockBitmap, Matrix4x4 viewM, Matrix4x4 projectionM, float[,] zBufferMark, Camera camera)
         {
-            Calculate(lockBitmap, modelM, viewM, projectionM, zBufferMark, camera);
+            Calculate(lockBitmap, viewM, projectionM, zBufferMark, camera);
 
             foreach(Triangle t in triangles)
             {
-                if(!t.BackFaced)
-                    t.Draw(lockBitmap, zBufferMark);
+                if (t.CheckBackFaceCulling(camera))
+                    continue;
+                
+                t.Draw(lockBitmap, zBufferMark);
+
             }
         }
     }

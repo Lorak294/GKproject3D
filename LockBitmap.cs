@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -162,6 +163,17 @@ namespace GKproject3D
             // For 8 bpp set color value (Red, Green and Blue values are the same)
             {
                 Pixels[i] = color.B;
+            }
+        }
+
+        public void Clear(Color color)
+        {
+            if(source != null)
+            {
+                using(Graphics g = Graphics.FromImage(source))
+                {
+                    g.Clear(color);
+                }
             }
         }
     }
