@@ -7,37 +7,29 @@ namespace GKproject3D
 {
     public partial class Form1 : Form
     {
-        private List<Object3D> objects;
-        Object3D car;
-
-        private LockBitmap lockBitmap;
-        private float[,] zBufferMark;
-
-        private bool animationActive;
-        private float carAnimationAngle = 0.0f;
-
-
-        private Camera camera;
         private const int FOV_DEGREES = 90;
-        const float A = 1.0f;
+
+        private List<Object3D> objects;
+        Object3D car = null!;
+        private Camera camera;
+        private LightSource candleLight;
+
+        private Scene scene;
         public Form1()
         {
             InitializeComponent();
             imageBox.Image = new Bitmap(imageBox.Width, imageBox.Height);
-            lockBitmap = new LockBitmap((Bitmap)imageBox.Image);
 
-            zBufferMark = new float[imageBox.Width, imageBox.Height];
-            ResetZBuffer();
+            animationStartBtn.Enabled = true;
+            animationStopBtn.Enabled = false;
 
-            animationActive = false;
-            animationStartBtn.Enabled = !animationActive;
-            animationStopBtn.Enabled = animationActive;
+            candleLight = new LightSource(new Vector3(0,40,0));
 
 
 
             objects = new List<Object3D>();
             camera = new Camera(
-                new Vector3(10, 10, 10), 
+                new Vector3(5, 5, 5), 
                 new Vector3(0.0f, 0.0f, 0.0f), 
                 new Vector3(0, 1, 0), 
                 (float)(Math.PI / 180) * FOV_DEGREES, 
@@ -45,20 +37,17 @@ namespace GKproject3D
                 100,
                 (float)imageBox.Width / imageBox.Height);
 
-            // MODELS
-            Matrix4x4 treeModelM = Matrix4x4.CreateScale(3.0f);
-            Matrix4x4 rockModelM = Matrix4x4.CreateScale(2.0f) * Matrix4x4.CreateTranslation(0, 0, -5.0f);
-            Matrix4x4 carModelM =  Matrix4x4.CreateTranslation(0, 0, 3);
-            Matrix4x4 candleModelM = Matrix4x4.CreateScale(0.4f) * Matrix4x4.CreateTranslation(0, 1.5f, -5.0f);
-            //car = new Object3D("../../../objects/carScaled.obj", Color.Red, carModelM);
+            xPosBox.Text = camera.Position.X.ToString();
+            yPosBox.Text = camera.Position.Y.ToString();
+            zPosBox.Text = camera.Position.Z.ToString();
+            xTargetBox.Text = camera.Target.X.ToString();
+            yTargetBox.Text = camera.Target.Y.ToString();
+            zTargetBox.Text = camera.Target.Z.ToString();
 
-            //objects.Add(car);
-            //objects.Add(new Object3D("../../../objects/treeScaled.obj", Color.Olive, treeModelM));
-            //objects.Add(new Object3D("../../../objects/grass.obj", Color.Green, Matrix4x4.Identity));
-            //objects.Add(new Object3D("../../../objects/rockScaled.obj", Color.Gray, rockModelM));
-            //objects.Add(new Object3D("../../../objects/candleScaled.obj", Color.LightGoldenrodYellow, candleModelM));
+            ImportScene("../../../objects/objectsWithMaterials/scene.obj");
 
-            ImportScene("../../../objects/scene.obj");
+
+            scene = new Scene(camera, (Bitmap)imageBox.Image, objects, car, candleLight);
 
             renderScene();
         }
@@ -66,32 +55,21 @@ namespace GKproject3D
 
         private void renderScene()
         {
-            ResetZBuffer();
+            scene.ResetZBuffer();
             // VIEW
-            Matrix4x4 viewM = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.UpVector);
+            Matrix4x4 viewM = Matrix4x4.CreateLookAt(scene.Camera.Position, scene.Camera.Target, scene.Camera.UpVector);
             // PROJECTION
-            Matrix4x4 projectionM = Matrix4x4.CreatePerspectiveFieldOfView(camera.FOV, camera.AspectRatio, camera.N, camera.F);
+            Matrix4x4 projectionM = Matrix4x4.CreatePerspectiveFieldOfView(scene.Camera.FOV, scene.Camera.AspectRatio, scene.Camera.N, scene.Camera.F);
 
-            lockBitmap.Clear(Color.White);
-            lockBitmap.LockBits();
+            scene.LockBitmap.Clear(Color.White);
+            scene.LockBitmap.LockBits();
 
-            foreach(Object3D obj in objects)
+            foreach(Object3D obj in scene.Objects)
             {
-                obj.Draw(lockBitmap, viewM, projectionM, zBufferMark, camera);
+                obj.Draw(scene, viewM, projectionM);
             }
-            lockBitmap.UnlockBits();
+            scene.LockBitmap.UnlockBits();
             imageBox.Refresh();
-        }
-
-        private void ResetZBuffer()
-        {
-           for(int i=0; i<zBufferMark.GetLength(0); i++)
-           {
-                for(int j=0; j<zBufferMark.GetLength(1); j++)
-                {
-                    zBufferMark[i,j] = 1000.0f;
-                }
-           }
         }
 
 
@@ -108,7 +86,7 @@ namespace GKproject3D
         }
         public void setAnimation(bool active)
         {
-            animationActive = active;
+            scene.AnimationActive = active;
             animationStartBtn.Enabled = !active;
             animationStopBtn.Enabled = active;
         }
@@ -123,44 +101,44 @@ namespace GKproject3D
         private void CarMovement()
         {
             // experimental
-            carAnimationAngle += 0.2f;
-            Matrix4x4 carModelM =  Matrix4x4.CreateRotationY(carAnimationAngle);
+            scene.CarAnimationAngle += 0.2f;
+            Matrix4x4 carModelM =  Matrix4x4.CreateRotationY(scene.CarAnimationAngle);
 
-            car.modelMatrix = carModelM;
+            scene.Car.modelMatrix = carModelM;
         }
 
         private void UpdateCameraPos()
         {
-            switch(camera.Mode)
+            switch(scene.Camera.Mode)
             {
                 case CameraMode.Follow:
-                    camera.Target = car.WorldPosition;
+                    scene.Camera.Target = scene.Car.WorldPosition;
                     break;
                 case CameraMode.Behind:
-                    camera.Position = (car.WorldPosition + new Vector3(0,2.5f,0) - car.WorldFrontVec*2);
-                    camera.Target = car.WorldPosition;
+                    scene.Camera.Position = (scene.Car.WorldPosition + new Vector3(0,2.5f,0) - scene.Car.WorldFrontVec*2);
+                    scene.Camera.Target = scene.Car.WorldPosition;
                     break;
                 default:
                     break;
             }
 
-            xPosBox.Text = camera.Position.X.ToString();
-            yPosBox.Text = camera.Position.Y.ToString();
-            zPosBox.Text = camera.Position.Z.ToString();
-            xTargetBox.Text = camera.Target.X.ToString();
-            yTargetBox.Text = camera.Target.Y.ToString();
-            zTargetBox.Text = camera.Target.Z.ToString();
+            xPosBox.Text = scene.Camera.Position.X.ToString();
+            yPosBox.Text = scene.Camera.Position.Y.ToString();
+            zPosBox.Text = scene.Camera.Position.Z.ToString();
+            xTargetBox.Text = scene.Camera.Target.X.ToString();
+            yTargetBox.Text = scene.Camera.Target.Y.ToString();
+            zTargetBox.Text = scene.Camera.Target.Z.ToString();
 
         }
 
         private void CameraRBtn_CheckedChanged(object sender, EventArgs e)
         {
             if (staticCameraRBtn.Checked)
-                camera.Mode = CameraMode.Static;
+                scene.Camera.Mode = CameraMode.Static;
             else if (followingCameraRBtn.Checked)
-                camera.Mode = CameraMode.Follow;
+                scene.Camera.Mode = CameraMode.Follow;
             else
-                camera.Mode = CameraMode.Behind;
+                scene.Camera.Mode = CameraMode.Behind;
 
             UpdateCameraPos();
             renderScene();
@@ -178,6 +156,18 @@ namespace GKproject3D
 
             string lineStr = sr.ReadLine()!;
 
+
+
+            // MATERIALS IMPORT
+            Dictionary<string, Material> materials = new Dictionary<string, Material>();
+            string currentMaterialName = "";
+            string[] firstLine = lineStr.Split(' ');
+            if(firstLine.Length == 2 && firstLine[0] == "mtllib")
+            {
+                materials = ImportMaterials("../../../objects/objectsWithMaterials/" + firstLine[1]);
+            }
+
+
             objects = new List<Object3D>();
 
             List<Vector3> vertList = new List<Vector3>();
@@ -187,6 +177,7 @@ namespace GKproject3D
             {
                 while(!lineStr.StartsWith('o'))
                     lineStr = sr.ReadLine()!;
+
 
                 if (lineStr.StartsWith('o'))
                 {
@@ -215,13 +206,18 @@ namespace GKproject3D
                     // triangles
                     while (lineStr != null && !lineStr.StartsWith('o'))
                     {
+                        if(lineStr.StartsWith("usemtl"))
+                        {
+                            currentMaterialName = lineStr.Split(' ')[1];
+                        }
                         if (lineStr.StartsWith('f'))
                         {
-                            trigList.Add(ParseTriangle(lineStr, vertList, normVectorList));
+                            trigList.Add(ParseTriangle(lineStr, vertList, normVectorList, materials[currentMaterialName]));
                         }
                         lineStr = sr.ReadLine()!;
                     }
 
+                    // marking CAR as special object
                     objects.Add(new Object3D(trigList, Color.AliceBlue, Matrix4x4.Identity));
                     if(name == "Car")
                     {
@@ -269,7 +265,7 @@ namespace GKproject3D
 
             return new Vector3(x, y, z);
         }
-        private Triangle ParseTriangle(string figureStr, List<Vector3> vertList, List<Vector3> normVectorList)
+        private Triangle ParseTriangle(string figureStr, List<Vector3> vertList, List<Vector3> normVectorList, Material material)
         {
             List<Point3D> selectedVerts = new List<Point3D>();
 
@@ -292,7 +288,74 @@ namespace GKproject3D
                 selectedVerts.Add(new Point3D(vertList[vertIdx - 1], normVectorList[normVectorIdx - 1]));
             }
 
-            return new Triangle(selectedVerts);
+            return new Triangle(selectedVerts,material);
+        }
+        private Dictionary<string,Material> ImportMaterials(string filepath)
+        {
+            // TO FINISH
+            Dictionary<string,Material> materials = new Dictionary<string,Material>();
+
+            FileStream fs = new FileStream(filepath, FileMode.Open, FileAccess.Read);
+            StreamReader sr = new StreamReader(fs);
+            sr.BaseStream.Seek(0, SeekOrigin.Begin);
+
+
+            string lineStr = sr.ReadLine()!;
+            string materialName = "error";
+            Vector3? kaVec = null, kdVec = null, ksVec = null;
+            float? alpha = null;
+
+            while (lineStr != null)
+            {
+                while(lineStr != null && !lineStr.StartsWith("newmtl"))
+                {
+                    string[] parameters = lineStr.Split(' ');
+
+                    
+
+                    switch(parameters[0])
+                    {
+                        case "Ka":
+                            kaVec = new Vector3(float.Parse(parameters[1], NumberStyles.Any, CultureInfo.InvariantCulture),
+                                float.Parse(parameters[2], NumberStyles.Any, CultureInfo.InvariantCulture),
+                                float.Parse(parameters[3], NumberStyles.Any, CultureInfo.InvariantCulture));
+                            break;
+                        case "Kd":
+                            kdVec = new Vector3(float.Parse(parameters[1], NumberStyles.Any, CultureInfo.InvariantCulture),
+                                float.Parse(parameters[2], NumberStyles.Any, CultureInfo.InvariantCulture),
+                                float.Parse(parameters[3], NumberStyles.Any, CultureInfo.InvariantCulture));
+                            break;
+                        case "Ks":
+                            ksVec = new Vector3(float.Parse(parameters[1], NumberStyles.Any, CultureInfo.InvariantCulture),
+                                float.Parse(parameters[2], NumberStyles.Any, CultureInfo.InvariantCulture),
+                                float.Parse(parameters[3], NumberStyles.Any, CultureInfo.InvariantCulture));
+                            break;
+                        case "alpha":
+                            alpha = float.Parse(parameters[1], NumberStyles.Any, CultureInfo.InvariantCulture);
+                            break;
+                    }
+                    lineStr = sr.ReadLine()!;
+                }
+                if(kaVec.HasValue && kdVec.HasValue && ksVec.HasValue && alpha.HasValue)
+                    materials.Add(materialName,new Material(ksVec.Value, kdVec.Value, kaVec.Value, alpha.Value));
+
+                if(lineStr != null)
+                {
+                    string[] lineArguments = lineStr.Split(' ');
+                    materialName = lineArguments[1];
+
+                    lineStr = sr.ReadLine()!;
+                }
+            }
+               
+
+
+
+
+
+            sr.Close();
+            fs.Close();
+            return materials;
         }
 
 

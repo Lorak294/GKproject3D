@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
+using System.Diagnostics;
 
 namespace GKproject3D
 {
@@ -54,20 +55,16 @@ namespace GKproject3D
         public Point3D[] Points { get; set; }
         public bool BackFaced { get; set; }
 
+        public Material Material { get; set; }
+
         // constructor
-        public Triangle(Point3D p0, Point3D p1, Point3D p2)
-        {
-            Points = new Point3D[3];
-            Points[0] = p0;
-            Points[1] = p1;
-            Points[2] = p2;
-        }
-        public Triangle(List<Point3D> points)
+        public Triangle(List<Point3D> points, Material material)
         {
             if (points.Count != 3)
                 throw new Exception("points list is not of 3 length!");
 
             Points = points.ToArray();
+            Material = material;
         }
 
         public bool CheckBackFaceCulling(Camera camera)
@@ -76,18 +73,15 @@ namespace GKproject3D
             return Vector3.Dot(v, Points[0].WorldNormal) >= 0;
         }
 
-        public void Draw(LockBitmap lockBitmap, float[,] zBufferMark)
+        public void Draw(Scene scene)
         {
 
             // if all of triangle is outside the screen than do not draw it
             if (!CheckVisibility())
                 return;
 
-            //lockBitmap.SetPixel((int)(Points[0].ScreenPosition.X), (int)(Points[0].ScreenPosition.Y), Color.Black);
-            //lockBitmap.SetPixel((int)(Points[1].ScreenPosition.X), (int)(Points[1].ScreenPosition.Y), Color.Black);
-            //lockBitmap.SetPixel((int)(Points[2].ScreenPosition.X), (int)(Points[2].ScreenPosition.Y), Color.Black);
 
-            FillOut(lockBitmap, zBufferMark);
+            FillOut(scene);
         }
 
         public bool CheckVisibility()
@@ -103,7 +97,7 @@ namespace GKproject3D
 
 
         // SCAN LINE FILLING ALGHORITM
-        public void FillOut(LockBitmap lockBitmap, float[,] zBufferMark)
+        public void FillOut(Scene scene)
         {
             ScanlinePoint3D[] screenPoints = new ScanlinePoint3D[3];
             for(int i=0; i< 3;i++)
@@ -126,15 +120,15 @@ namespace GKproject3D
 
             if (screenPoints[0].Position.Y == screenPoints[1].Position.Y)
             {
-                BottomFlatCase(screenPoints, lockBitmap, zBufferMark);
+                BottomFlatCase(screenPoints, scene);
             }
             else
             {
-                BottomSharpCase(screenPoints, lockBitmap, zBufferMark);
+                BottomSharpCase(screenPoints, scene);
             }
         }
 
-        private void BottomFlatCase(ScanlinePoint3D[] screenPoints, LockBitmap lockBitmap, float[,] zBufferMark)
+        private void BottomFlatCase(ScanlinePoint3D[] screenPoints, Scene scene)
         {
             // p0.Y == p1.Y and p0.X <= p1.X
 
@@ -151,13 +145,13 @@ namespace GKproject3D
             int lowY = (int)screenPoints[0].Position.Y;
             int topY = (int)Math.Round(screenPoints[2].Position.Y);
 
-            if (topY >= lockBitmap.Height) topY = lockBitmap.Height-1;
+            if (topY >= scene.LockBitmap.Height) topY = scene.LockBitmap.Height-1;
 
             for (int scanlineY = lowY; scanlineY <= topY; scanlineY++)
             {
                 // fill scanline
                 if (scanlineY >= 0)
-                    FillScanline(edge0point, edge1point, scanlineY, lockBitmap, zBufferMark);
+                    FillScanline(edge0point, edge1point, scanlineY, scene);
 
                 // update values forn next iteration
                 edge0point.Position += positionStep0;
@@ -167,7 +161,7 @@ namespace GKproject3D
 
             }
         }
-        private void BottomSharpCase(ScanlinePoint3D[] screenPoints, LockBitmap lockBitmap, float[,] zBufferMark)
+        private void BottomSharpCase(ScanlinePoint3D[] screenPoints, Scene scene)
         {
             // p0.Y < p1.Y <= p2.Y
 
@@ -187,7 +181,7 @@ namespace GKproject3D
             int lowY = (int)screenPoints[0].Position.Y;
             int topY = (int)Math.Round(screenPoints[1].Position.Y);
 
-            if (topY >= lockBitmap.Height) topY = lockBitmap.Height-1;
+            if (topY >= scene.LockBitmap.Height) topY = scene.LockBitmap.Height-1;
             int scanlineY;
             for (scanlineY = lowY; scanlineY <= topY; scanlineY++)
             {
@@ -195,9 +189,9 @@ namespace GKproject3D
                 if (scanlineY > 0)
                 {
                     if (leftSideP1)
-                        FillScanline(edgePoint1, edgePoint2, scanlineY, lockBitmap, zBufferMark);
+                        FillScanline(edgePoint1, edgePoint2, scanlineY, scene);
                     else
-                        FillScanline(edgePoint2, edgePoint1, scanlineY, lockBitmap, zBufferMark);
+                        FillScanline(edgePoint2, edgePoint1, scanlineY, scene);
                 }
                 // appply steps
                 edgePoint1.Position += positionStep1;
@@ -219,7 +213,7 @@ namespace GKproject3D
 
             edgePoint1 = screenPoints[1].Copy();
 
-            if (topY >= lockBitmap.Height) topY = lockBitmap.Height-1;
+            if (topY >= scene.LockBitmap.Height) topY = scene.LockBitmap.Height-1;
 
             for (; scanlineY <= topY; scanlineY++)
             {
@@ -227,9 +221,9 @@ namespace GKproject3D
                 if (scanlineY > 0)
                 {
                     if (leftSideP1)
-                        FillScanline(edgePoint1, edgePoint2, scanlineY, lockBitmap, zBufferMark);
+                        FillScanline(edgePoint1, edgePoint2, scanlineY, scene);
                     else
-                        FillScanline(edgePoint2, edgePoint1, scanlineY, lockBitmap, zBufferMark);
+                        FillScanline(edgePoint2, edgePoint1, scanlineY, scene);
                 }
                 // appply steps
                 edgePoint1.Position += positionStep1;
@@ -238,7 +232,7 @@ namespace GKproject3D
                 edgePoint2.Normal += normalStep2;
             }
         }
-        public void FillScanline(ScanlinePoint3D leftPoint, ScanlinePoint3D rightPoint, int y, LockBitmap lockBitmap, float[,] zBufferMark)
+        public void FillScanline(ScanlinePoint3D leftPoint, ScanlinePoint3D rightPoint, int y, Scene scene)
         {
             // ADD INTERPOLATION 
             Color c = Color.Red;
@@ -246,37 +240,59 @@ namespace GKproject3D
             float dx = rightPoint.Position.X - leftPoint.Position.X;
             float zStep = (rightPoint.Position.Z - leftPoint.Position.Z) / dx;
             Vector3 normStep = (rightPoint.Normal - leftPoint.Normal) / dx;
-
+            
             float zBuff = leftPoint.Position.Z;
             Vector3 normVec = leftPoint.Normal;
-            for (int x = (int)Math.Max(0, leftPoint.Position.X); x < Math.Min(rightPoint.Position.X, lockBitmap.Width); x++)
+            for (int x = (int)Math.Max(0, leftPoint.Position.X); x < Math.Min(rightPoint.Position.X, scene.LockBitmap.Width); x++)
             {
-                if (zBufferMark[x, y] > zBuff)
+                if (scene.Zbuffer[x, y] > zBuff)
                 {
-                    lockBitmap.SetPixel(x, y, NormalVectorToColor(Vector3.Normalize(normVec)));
-                    zBufferMark[x, y] = zBuff;
+                    //lockBitmap.SetPixel(x, y, NormalVectorToColor(Vector3.Normalize(normVec)));
+                    scene.LockBitmap.SetPixel(x, y, VectorToColor(this.Material.Kd));
+                    scene.Zbuffer[x, y] = zBuff;
                 }
-
-
                 zBuff += zStep;
                 normVec += normStep;
             }
         }
 
         //// DELETE THIS LATER
-        public static Color NormalVectorToColor(Vector3 normV)
+        public static Color VectorToColor(Vector3 vec)
         {
-            int r = Math.Max(127 + (int)(normV.X * 128), 0);
-            int g = Math.Max(127 + (int)(normV.Y * 128), 0);
-            int b = Math.Max(127 + (int)(normV.Z * 128), 0);
+            int r = Math.Max(127 + (int)(vec.X * 128), 0);
+            int g = Math.Max(127 + (int)(vec.Y * 128), 0);
+            int b = Math.Max(127 + (int)(vec.Z * 128), 0);
 
             return Color.FromArgb(r, g, b);
         }
 
-        //public void UpdateWorldPosition(Matrix4x4 matrix)
-        //{
-        //    foreach
-        //}
+        public Color CalcPhongLight(Scene scene, Vector3 pixelPosition, Vector3 N)
+        {
+            Vector3 finalColor = new Vector3(0, 0, 0);
+
+            Vector3 RGB = Material.Ka; // IA = 1
+
+
+            Vector3 V = Vector3.Normalize(scene.Camera.Position - pixelPosition);
+
+
+            // po wszystkich żródłach światłach
+
+            // candleLight
+            Vector3 L = Vector3.Normalize(scene.CandleLight.Position - pixelPosition);
+            float LN = Vector3.Dot(L, N);
+            Vector3 R = 2 * LN * N - L;
+
+            Vector3 candleFactor = Material.Kd * Vector3.Dot(L, N) * scene.CandleLight.Id + Material.Ks * (float)Math.Pow(Vector3.Dot(R, V), Material.Alpha) * scene.CandleLight.Is;
+
+
+            float Ia = 1;
+            finalColor = Material.Ka * Ia + candleFactor;
+
+            return VectorToColor(finalColor);
+        }
+
+
     }
     public class Object3D
     {
@@ -299,7 +315,7 @@ namespace GKproject3D
         }
 
         // DRAW
-        public void Calculate(LockBitmap lockBitmap, Matrix4x4 viewM, Matrix4x4 projectionM, float[,] zBufferMark, Camera camera)
+        public void Calculate(Scene scene, Matrix4x4 viewM, Matrix4x4 projectionM)
         {
             Vector4 v4Pos = new Vector4(position, 1);
             v4Pos = Vector4.Transform(v4Pos, modelMatrix);
@@ -320,8 +336,8 @@ namespace GKproject3D
                     
                     
                     t.Points[i].ScreenPosition = new Vector3(
-                        (float)Math.Round((t.Points[i].NDCPosition.X + 1) * lockBitmap.Width / 2),
-                        (float)Math.Round((1 - t.Points[i].NDCPosition.Y) * lockBitmap.Height / 2),
+                        (float)Math.Round((t.Points[i].NDCPosition.X + 1) * scene.LockBitmap.Width / 2),
+                        (float)Math.Round((1 - t.Points[i].NDCPosition.Y) * scene.LockBitmap.Height / 2),
                         (t.Points[i].NDCPosition.Z + 1) / 2);
 
                     t.Points[i].WorldNormal = Vector3.TransformNormal(t.Points[i].Normal, modelMatrix);
@@ -329,16 +345,16 @@ namespace GKproject3D
             }
         }
 
-        public void Draw(LockBitmap lockBitmap, Matrix4x4 viewM, Matrix4x4 projectionM, float[,] zBufferMark, Camera camera)
+        public void Draw(Scene scene, Matrix4x4 viewM, Matrix4x4 projectionM)
         {
-            Calculate(lockBitmap, viewM, projectionM, zBufferMark, camera);
+            Calculate(scene, viewM, projectionM);
 
             foreach(Triangle t in triangles)
             {
-                if (t.CheckBackFaceCulling(camera))
+                if (t.CheckBackFaceCulling(scene.Camera))
                     continue;
                 
-                t.Draw(lockBitmap, zBufferMark);
+                t.Draw(scene);
 
             }
         }
