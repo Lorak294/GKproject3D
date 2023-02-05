@@ -32,6 +32,10 @@
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.imageBox = new System.Windows.Forms.PictureBox();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.phongShadingRB = new System.Windows.Forms.RadioButton();
+            this.gouraudShadingRB = new System.Windows.Forms.RadioButton();
+            this.staticShadingRB = new System.Windows.Forms.RadioButton();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.label4 = new System.Windows.Forms.Label();
@@ -57,6 +61,7 @@
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.imageBox)).BeginInit();
             this.panel1.SuspendLayout();
+            this.groupBox3.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox4.SuspendLayout();
             this.grpbox.SuspendLayout();
@@ -90,6 +95,7 @@
             // 
             // panel1
             // 
+            this.panel1.Controls.Add(this.groupBox3);
             this.panel1.Controls.Add(this.groupBox2);
             this.panel1.Controls.Add(this.groupBox1);
             this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -97,6 +103,50 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(296, 632);
             this.panel1.TabIndex = 1;
+            // 
+            // groupBox3
+            // 
+            this.groupBox3.Controls.Add(this.phongShadingRB);
+            this.groupBox3.Controls.Add(this.gouraudShadingRB);
+            this.groupBox3.Controls.Add(this.staticShadingRB);
+            this.groupBox3.Location = new System.Drawing.Point(24, 378);
+            this.groupBox3.Name = "groupBox3";
+            this.groupBox3.Size = new System.Drawing.Size(255, 109);
+            this.groupBox3.TabIndex = 7;
+            this.groupBox3.TabStop = false;
+            this.groupBox3.Text = "Shading";
+            // 
+            // phongShadingRB
+            // 
+            this.phongShadingRB.AutoSize = true;
+            this.phongShadingRB.Location = new System.Drawing.Point(6, 72);
+            this.phongShadingRB.Name = "phongShadingRB";
+            this.phongShadingRB.Size = new System.Drawing.Size(60, 19);
+            this.phongShadingRB.TabIndex = 2;
+            this.phongShadingRB.Text = "Phong";
+            this.phongShadingRB.UseVisualStyleBackColor = true;
+            // 
+            // gouraudShadingRB
+            // 
+            this.gouraudShadingRB.AutoSize = true;
+            this.gouraudShadingRB.Location = new System.Drawing.Point(6, 47);
+            this.gouraudShadingRB.Name = "gouraudShadingRB";
+            this.gouraudShadingRB.Size = new System.Drawing.Size(71, 19);
+            this.gouraudShadingRB.TabIndex = 1;
+            this.gouraudShadingRB.Text = "Gouraud";
+            this.gouraudShadingRB.UseVisualStyleBackColor = true;
+            // 
+            // staticShadingRB
+            // 
+            this.staticShadingRB.AutoSize = true;
+            this.staticShadingRB.Checked = true;
+            this.staticShadingRB.Location = new System.Drawing.Point(6, 22);
+            this.staticShadingRB.Name = "staticShadingRB";
+            this.staticShadingRB.Size = new System.Drawing.Size(54, 19);
+            this.staticShadingRB.TabIndex = 0;
+            this.staticShadingRB.TabStop = true;
+            this.staticShadingRB.Text = "Static";
+            this.staticShadingRB.UseVisualStyleBackColor = true;
             // 
             // groupBox2
             // 
@@ -307,6 +357,7 @@
             // 
             // animationTimer
             // 
+            this.animationTimer.Interval = 50;
             this.animationTimer.Tick += new System.EventHandler(this.animationTimer_Tick);
             // 
             // Form1
@@ -320,6 +371,8 @@
             this.tableLayoutPanel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.imageBox)).EndInit();
             this.panel1.ResumeLayout(false);
+            this.groupBox3.ResumeLayout(false);
+            this.groupBox3.PerformLayout();
             this.groupBox2.ResumeLayout(false);
             this.groupBox2.PerformLayout();
             this.groupBox4.ResumeLayout(false);
@@ -358,5 +411,9 @@
         private TextBox zPosBox;
         private TextBox yPosBox;
         private TextBox xPosBox;
+        private GroupBox groupBox3;
+        private RadioButton phongShadingRB;
+        private RadioButton gouraudShadingRB;
+        private RadioButton staticShadingRB;
     }
 }
