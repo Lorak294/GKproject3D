@@ -1,4 +1,5 @@
 using System.Diagnostics.Tracing;
+using System.Drawing;
 using System.Globalization;
 using System.Numerics;
 
@@ -6,72 +7,357 @@ namespace GKproject3D
 {
     public partial class Form1 : Form
     {
-        private List<Object3D> objects;
-
-        private LockBitmap lockBitmap;
-        private float[,] zBufferMark;
-
-
-        private Camera camera;
         private const int FOV_DEGREES = 90;
-        const float A = 1.0f;
+
+        private List<Object3D> objects;
+        Object3D car = null!;
+        private Camera camera;
+        private LightSource candleLight;
+
+        private Scene scene;
         public Form1()
         {
             InitializeComponent();
             imageBox.Image = new Bitmap(imageBox.Width, imageBox.Height);
-            lockBitmap = new LockBitmap((Bitmap)imageBox.Image);
 
-            zBufferMark = new float[imageBox.Width, imageBox.Height];
-            ResetZBuffer();
-            
+            animationStartBtn.Enabled = true;
+            animationStopBtn.Enabled = false;
+
+            candleLight = new LightSource(new Vector3(0,40,0));
+
+
 
             objects = new List<Object3D>();
-            camera = new Camera(new Vector3(-1.7f, 0.5f, -2.0f), new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0, 1, 0));
+            camera = new Camera(
+                new Vector3(5, 5, 5), 
+                new Vector3(0.0f, 0.0f, 0.0f), 
+                new Vector3(0, 1, 0), 
+                (float)(Math.PI / 180) * FOV_DEGREES, 
+                0.1f,
+                100,
+                (float)imageBox.Width / imageBox.Height);
 
-            objects.Add(new Object3D("../../../objects/treeScaled.obj", Color.Olive));
-            objects.Add(new Object3D("../../../objects/carScaled.obj", Color.Red));
+            xPosBox.Text = camera.Position.X.ToString();
+            yPosBox.Text = camera.Position.Y.ToString();
+            zPosBox.Text = camera.Position.Z.ToString();
+            xTargetBox.Text = camera.Target.X.ToString();
+            yTargetBox.Text = camera.Target.Y.ToString();
+            zTargetBox.Text = camera.Target.Z.ToString();
+
+            ImportScene("../../../objects/objectsWithMaterials/scene.obj");
+
+
+            scene = new Scene(camera, (Bitmap)imageBox.Image, objects, car, candleLight);
+
+            renderScene();
         }
 
 
         private void renderScene()
         {
-            ResetZBuffer();
-            // MODEL
-            Matrix4x4 treeModelM = Matrix4x4.Identity;
-            Matrix4x4 carModelM = Matrix4x4.CreateScale(0.4f) * Matrix4x4.CreateTranslation(1.0f, 0, 0);
-
+            scene.ResetZBuffer();
             // VIEW
-            Matrix4x4 viewM = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.UpVector);
-
+            Matrix4x4 viewM = Matrix4x4.CreateLookAt(scene.Camera.Position, scene.Camera.Target, scene.Camera.UpVector);
             // PROJECTION
-            float fov = (float)(Math.PI / 180) * FOV_DEGREES;
-            float aspectRatio = imageBox.Width / imageBox.Height;
-            float n = 1;
-            float f = 100;
-            Matrix4x4 projectionM = Matrix4x4.CreatePerspectiveFieldOfView(fov, aspectRatio, n, f);
+            Matrix4x4 projectionM = Matrix4x4.CreatePerspectiveFieldOfView(scene.Camera.FOV, scene.Camera.AspectRatio, scene.Camera.N, scene.Camera.F);
 
-            lockBitmap.LockBits();
-            objects[0].Draw(lockBitmap, treeModelM, viewM, projectionM, zBufferMark, camera);
-            objects[1].Draw(lockBitmap, carModelM, viewM, projectionM, zBufferMark, camera);
-            lockBitmap.UnlockBits();
+            scene.LockBitmap.Clear(Color.White);
+            scene.LockBitmap.LockBits();
+
+            foreach(Object3D obj in scene.Objects)
+            {
+                obj.Draw(scene, viewM, projectionM);
+            }
+            scene.LockBitmap.UnlockBits();
             imageBox.Refresh();
         }
 
-        private void ResetZBuffer()
+
+        private void animationStartBtn_Click(object sender, EventArgs e)
         {
-           for(int i=0; i<zBufferMark.GetLength(0); i++)
-           {
-                for(int j=0; j<zBufferMark.GetLength(1); j++)
-                {
-                    zBufferMark[i,j] = 1000.0f;
-                }
-           }
+            setAnimation(true);
+            animationTimer.Start();
         }
 
-
-        private void button1_Click(object sender, EventArgs e)
+        private void animationStopBtn_Click(object sender, EventArgs e)
         {
+            setAnimation(false);
+            animationTimer.Stop();
+        }
+        public void setAnimation(bool active)
+        {
+            scene.AnimationActive = active;
+            animationStartBtn.Enabled = !active;
+            animationStopBtn.Enabled = active;
+        }
+
+        private void animationTimer_Tick(object sender, EventArgs e)
+        {
+            CarMovement();
+            UpdateCameraPos();
             renderScene();
         }
+
+        private void CarMovement()
+        {
+            // experimental
+            scene.CarAnimationAngle += 0.2f;
+            Matrix4x4 carModelM =  Matrix4x4.CreateRotationY(scene.CarAnimationAngle);
+
+            scene.Car.modelMatrix = carModelM;
+        }
+
+        private void UpdateCameraPos()
+        {
+            switch(scene.Camera.Mode)
+            {
+                case CameraMode.Follow:
+                    scene.Camera.Target = scene.Car.WorldPosition;
+                    break;
+                case CameraMode.Behind:
+                    scene.Camera.Position = (scene.Car.WorldPosition + new Vector3(0,2.5f,0) - scene.Car.WorldFrontVec*2);
+                    scene.Camera.Target = scene.Car.WorldPosition;
+                    break;
+                default:
+                    break;
+            }
+
+            xPosBox.Text = scene.Camera.Position.X.ToString();
+            yPosBox.Text = scene.Camera.Position.Y.ToString();
+            zPosBox.Text = scene.Camera.Position.Z.ToString();
+            xTargetBox.Text = scene.Camera.Target.X.ToString();
+            yTargetBox.Text = scene.Camera.Target.Y.ToString();
+            zTargetBox.Text = scene.Camera.Target.Z.ToString();
+
+        }
+
+        private void CameraRBtn_CheckedChanged(object sender, EventArgs e)
+        {
+            if (staticCameraRBtn.Checked)
+                scene.Camera.Mode = CameraMode.Static;
+            else if (followingCameraRBtn.Checked)
+                scene.Camera.Mode = CameraMode.Follow;
+            else
+                scene.Camera.Mode = CameraMode.Behind;
+
+            UpdateCameraPos();
+            renderScene();
+        }
+
+
+
+        // SCENE IMPORTING
+        private void ImportScene(string filepath)
+        {
+            FileStream fs = new FileStream(filepath, FileMode.Open, FileAccess.Read);
+            StreamReader sr = new StreamReader(fs);
+            sr.BaseStream.Seek(0, SeekOrigin.Begin);
+
+
+            string lineStr = sr.ReadLine()!;
+
+
+
+            // MATERIALS IMPORT
+            Dictionary<string, Material> materials = new Dictionary<string, Material>();
+            string currentMaterialName = "";
+            string[] firstLine = lineStr.Split(' ');
+            if(firstLine.Length == 2 && firstLine[0] == "mtllib")
+            {
+                materials = ImportMaterials("../../../objects/objectsWithMaterials/" + firstLine[1]);
+            }
+
+
+            objects = new List<Object3D>();
+
+            List<Vector3> vertList = new List<Vector3>();
+            List<Vector3> normVectorList = new List<Vector3>();
+
+            while (lineStr != null)
+            {
+                while(!lineStr.StartsWith('o'))
+                    lineStr = sr.ReadLine()!;
+
+
+                if (lineStr.StartsWith('o'))
+                {
+                    // importing object
+                    List<Triangle> trigList = new List<Triangle>();
+
+                    string[] header = lineStr.Split(' ');
+                    string name = header[1];
+
+                    lineStr = sr.ReadLine()!;
+
+                    // vertices
+                    while (lineStr.StartsWith("v "))
+                    {
+                        vertList.Add(ParseVertex(lineStr));
+                        lineStr = sr.ReadLine()!;
+                    }
+
+                    // normal vectors
+                    while (lineStr.StartsWith("vn"))
+                    {
+                        normVectorList.Add(ParseNormVector(lineStr));
+                        lineStr = sr.ReadLine()!;
+                    }
+
+                    // triangles
+                    while (lineStr != null && !lineStr.StartsWith('o'))
+                    {
+                        if(lineStr.StartsWith("usemtl"))
+                        {
+                            currentMaterialName = lineStr.Split(' ')[1];
+                        }
+                        if (lineStr.StartsWith('f'))
+                        {
+                            trigList.Add(ParseTriangle(lineStr, vertList, normVectorList, materials[currentMaterialName]));
+                        }
+                        lineStr = sr.ReadLine()!;
+                    }
+
+                    // marking CAR as special object
+                    objects.Add(new Object3D(trigList, Color.AliceBlue, Matrix4x4.Identity));
+                    if(name == "Car")
+                    {
+                        car = objects.Last();
+                    }
+                }
+            }
+
+            sr.Close();
+            fs.Close();
+        }
+        private Vector3 ParseVertex(string normVectorStr)
+        {
+            string[] args = normVectorStr.Split(' ');
+
+            if (args[0] != "v")
+                throw new ArgumentException("Wrong string psssed to Vertex Parser.");
+
+            float x, y, z;
+
+            if (!float.TryParse(args[1], NumberStyles.Any, CultureInfo.InvariantCulture, out x))
+                throw new ArgumentException("Wrong string psssed to Vertex Parser.");
+            if (!float.TryParse(args[2], NumberStyles.Any, CultureInfo.InvariantCulture, out y))
+                throw new ArgumentException("Wrong string psssed to Vertex Parser.");
+            if (!float.TryParse(args[3], NumberStyles.Any, CultureInfo.InvariantCulture, out z))
+                throw new ArgumentException("Wrong string psssed to Vertex Parser.");
+
+            return new Vector3(x, y, z);
+        }
+        private Vector3 ParseNormVector(string normVectorStr)
+        {
+            string[] args = normVectorStr.Split(' ');
+
+            if (args[0] != "vn")
+                throw new ArgumentException("Wrong string psssed to Norm Vector Parser.");
+
+            float x, y, z;
+
+            if (!float.TryParse(args[1], NumberStyles.Any, CultureInfo.InvariantCulture, out x))
+                throw new ArgumentException("Wrong string psssed to Norm Vector Parser.");
+            if (!float.TryParse(args[2], NumberStyles.Any, CultureInfo.InvariantCulture, out y))
+                throw new ArgumentException("Wrong string psssed to Norm Vector Parser.");
+            if (!float.TryParse(args[3], NumberStyles.Any, CultureInfo.InvariantCulture, out z))
+                throw new ArgumentException("Wrong string psssed to Norm Vector Parser.");
+
+            return new Vector3(x, y, z);
+        }
+        private Triangle ParseTriangle(string figureStr, List<Vector3> vertList, List<Vector3> normVectorList, Material material)
+        {
+            List<Point3D> selectedVerts = new List<Point3D>();
+
+            string[] args = figureStr.Split(' ');
+
+            foreach (string arg in args)
+            {
+                if (arg == "f")
+                    continue;
+
+                string[] vertArg = arg.Split('/');
+
+                int vertIdx, normVectorIdx;
+
+                if (!(int.TryParse(vertArg[0], out vertIdx) && int.TryParse(vertArg[2], out normVectorIdx)))
+                {
+                    throw new ArgumentException("wrong string - int parsing problem");
+                }
+
+                selectedVerts.Add(new Point3D(vertList[vertIdx - 1], normVectorList[normVectorIdx - 1]));
+            }
+
+            return new Triangle(selectedVerts,material);
+        }
+        private Dictionary<string,Material> ImportMaterials(string filepath)
+        {
+            // TO FINISH
+            Dictionary<string,Material> materials = new Dictionary<string,Material>();
+
+            FileStream fs = new FileStream(filepath, FileMode.Open, FileAccess.Read);
+            StreamReader sr = new StreamReader(fs);
+            sr.BaseStream.Seek(0, SeekOrigin.Begin);
+
+
+            string lineStr = sr.ReadLine()!;
+            string materialName = "error";
+            Vector3? kaVec = null, kdVec = null, ksVec = null;
+            float? alpha = null;
+
+            while (lineStr != null)
+            {
+                while(lineStr != null && !lineStr.StartsWith("newmtl"))
+                {
+                    string[] parameters = lineStr.Split(' ');
+
+                    
+
+                    switch(parameters[0])
+                    {
+                        case "Ka":
+                            kaVec = new Vector3(float.Parse(parameters[1], NumberStyles.Any, CultureInfo.InvariantCulture),
+                                float.Parse(parameters[2], NumberStyles.Any, CultureInfo.InvariantCulture),
+                                float.Parse(parameters[3], NumberStyles.Any, CultureInfo.InvariantCulture));
+                            break;
+                        case "Kd":
+                            kdVec = new Vector3(float.Parse(parameters[1], NumberStyles.Any, CultureInfo.InvariantCulture),
+                                float.Parse(parameters[2], NumberStyles.Any, CultureInfo.InvariantCulture),
+                                float.Parse(parameters[3], NumberStyles.Any, CultureInfo.InvariantCulture));
+                            break;
+                        case "Ks":
+                            ksVec = new Vector3(float.Parse(parameters[1], NumberStyles.Any, CultureInfo.InvariantCulture),
+                                float.Parse(parameters[2], NumberStyles.Any, CultureInfo.InvariantCulture),
+                                float.Parse(parameters[3], NumberStyles.Any, CultureInfo.InvariantCulture));
+                            break;
+                        case "alpha":
+                            alpha = float.Parse(parameters[1], NumberStyles.Any, CultureInfo.InvariantCulture);
+                            break;
+                    }
+                    lineStr = sr.ReadLine()!;
+                }
+                if(kaVec.HasValue && kdVec.HasValue && ksVec.HasValue && alpha.HasValue)
+                    materials.Add(materialName,new Material(ksVec.Value, kdVec.Value, kaVec.Value, alpha.Value));
+
+                if(lineStr != null)
+                {
+                    string[] lineArguments = lineStr.Split(' ');
+                    materialName = lineArguments[1];
+
+                    lineStr = sr.ReadLine()!;
+                }
+            }
+               
+
+
+
+
+
+            sr.Close();
+            fs.Close();
+            return materials;
+        }
+
+
     }
 }
