@@ -9,6 +9,11 @@ namespace GKproject3D
     {
         private const int FOV_DEGREES = 90;
         private const int SPOTLIGHT_ANGLE = 45;
+        private const float CARINCREMENT = 0.05f;
+        private const float POLICELIGHTINCREMENT = 0.12f;
+
+        private Vector3 STATIC_CAMERA_POSITION = Vector3.One * 5.0f;
+        private Vector3 STATIC_CAMERA_TARGET = Vector3.Zero;
 
         private List<Object3D> objects;
         Object3D car = null!;
@@ -25,9 +30,9 @@ namespace GKproject3D
 
             // camera
             camera = new Camera(
-                new Vector3(5, 5, 5), 
-                new Vector3(0.0f, 0.0f, 0.0f), 
-                new Vector3(0, 1, 0), 
+                STATIC_CAMERA_POSITION, 
+                STATIC_CAMERA_TARGET, 
+                Vector3.UnitY, 
                 (float)(Math.PI / 180) * FOV_DEGREES, 
                 0.1f,
                 100,
@@ -47,18 +52,13 @@ namespace GKproject3D
             // lightSources
             List<LightSource> lightsSources = new List<LightSource>();
             //  candle light
-            //candleLight = new LightSource(new Vector3(0.012919f, 1.9f, -6.139567f), 0.5f, 0.5f);
-
-
-
-            lightsSources.Add(new LightSource(new Vector3(0.012919f, 1.9f, -6.139567f),Vector3.One*0.5f, Vector3.One * 0.5f));
+            lightsSources.Add(new LightSource(new Vector3(0.012919f, 1.9f, -6.139567f),Vector3.One, Vector3.One));
             // car spotlight
             SpotLight carSpotlight = new SpotLight(car.WorldPosition, Vector3.One, Vector3.One, car.WorldFrontVec, (float)Math.Cos((Math.PI / 180) * SPOTLIGHT_ANGLE));
             lightsSources.Add(carSpotlight);
             // police light spotlight
             SpotLight policeLight = new SpotLight(car.WorldPosition, Vector3.UnitZ, Vector3.UnitZ, car.WorldFrontVec, (float)Math.Cos((Math.PI / 180) * SPOTLIGHT_ANGLE));
             lightsSources.Add(policeLight);
-
 
 
             scene = new Scene(camera, (Bitmap)imageBox.Image, objects, car,lightsSources,carSpotlight, policeLight);
@@ -83,45 +83,6 @@ namespace GKproject3D
                 obj.Draw(scene, viewM, projectionM);
             }
             scene.LockBitmap.UnlockBits();
-
-
-
-
-            // lightSource
-            using(Graphics g = Graphics.FromImage(imageBox.Image))
-            {
-
-                        Vector4 v4 = new Vector4(scene.CarSpotlight.Position, 1);
-                        v4 = Vector4.Transform(v4, viewM);
-                        v4 = Vector4.Transform(v4, projectionM);
-
-                        Vector3 NDCPosition = new Vector3(v4.X / v4.W, v4.Y / v4.W, v4.Z / v4.W);
-
-
-                       Vector3 ScreenPosition = new Vector3(
-                            (float)Math.Round((NDCPosition.X + 1) * scene.LockBitmap.Width / 2),
-                            (float)Math.Round((1 - NDCPosition.Y) * scene.LockBitmap.Height / 2),
-                            (NDCPosition.Z + 1) / 2);
-
-                g.DrawEllipse(Pens.Red, ScreenPosition.X, ScreenPosition.Y, 10, 10);
-
-
-                v4 = new Vector4(scene.PoliceLight.Position, 1);
-                v4 = Vector4.Transform(v4, viewM);
-                v4 = Vector4.Transform(v4, projectionM);
-
-                NDCPosition = new Vector3(v4.X / v4.W, v4.Y / v4.W, v4.Z / v4.W);
-
-
-                ScreenPosition = new Vector3(
-                     (float)Math.Round((NDCPosition.X + 1) * scene.LockBitmap.Width / 2),
-                     (float)Math.Round((1 - NDCPosition.Y) * scene.LockBitmap.Height / 2),
-                     (NDCPosition.Z + 1) / 2);
-
-                g.DrawEllipse(Pens.Green, ScreenPosition.X, ScreenPosition.Y, 10, 10);
-            }
-
-
             imageBox.Refresh();
         }
 
@@ -131,7 +92,6 @@ namespace GKproject3D
             setAnimation(true);
             animationTimer.Start();
         }
-
         private void animationStopBtn_Click(object sender, EventArgs e)
         {
             setAnimation(false);
@@ -143,33 +103,34 @@ namespace GKproject3D
             animationStartBtn.Enabled = !active;
             animationStopBtn.Enabled = active;
         }
-
         private void animationTimer_Tick(object sender, EventArgs e)
         {
             CarMovement();
             UpdateCameraPos();
             renderScene();
         }
-
         private void CarMovement()
         {
             // experimental
-            scene.CarAnimationAngle += 0.2f;
-            scene.PoliceLightAngle += 0.2f;
+            scene.CarAnimationAngle += CARINCREMENT;
+            scene.PoliceLightAngle += POLICELIGHTINCREMENT;
             Matrix4x4 carModelM =  Matrix4x4.CreateRotationY(scene.CarAnimationAngle);
             scene.Car.modelMatrix = carModelM;
         }
-
         private void UpdateCameraPos()
         {
             switch(scene.Camera.Mode)
             {
+                case CameraMode.Static:
+                    scene.Camera.Position = STATIC_CAMERA_POSITION;
+                    scene.Camera.Target = STATIC_CAMERA_TARGET;
+                    break;
                 case CameraMode.Follow:
                     scene.Camera.Target = scene.Car.WorldPosition;
                     break;
                 case CameraMode.Behind:
                     scene.Camera.Position = (scene.Car.WorldPosition + new Vector3(0,2.5f,0) - scene.Car.WorldFrontVec*2);
-                    scene.Camera.Target = scene.Car.WorldPosition;
+                    scene.Camera.Target = scene.Car.WorldPosition + Vector3.UnitY;
                     break;
                 default:
                     break;
@@ -183,7 +144,6 @@ namespace GKproject3D
             zTargetBox.Text = scene.Camera.Target.Z.ToString();
 
         }
-
         private void CameraRBtn_CheckedChanged(object sender, EventArgs e)
         {
             if (staticCameraRBtn.Checked)
@@ -196,7 +156,6 @@ namespace GKproject3D
             UpdateCameraPos();
             renderScene();
         }
-
         private void ShadingRBtn_CheckedChanged(object sender, EventArgs e)
         {
             if (staticShadingRB.Checked)
@@ -422,5 +381,15 @@ namespace GKproject3D
             return materials;
         }
 
+        private void Form1_SizeChanged(object sender, EventArgs e)
+        {
+            imageBox.Image  = new Bitmap(imageBox.Width, imageBox.Height);
+            scene.LockBitmap = new LockBitmap((Bitmap)imageBox.Image);
+            scene.Camera.AspectRatio = (float)imageBox.Width / imageBox.Height;
+            scene.Zbuffer = new float[scene.LockBitmap.Width, scene.LockBitmap.Height];
+            scene.ResetZBuffer();
+
+            renderScene();
+        }
     }
 }

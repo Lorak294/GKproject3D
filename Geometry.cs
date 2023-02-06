@@ -300,9 +300,11 @@ namespace GKproject3D
         
         public static Color VectorToColor(Vector3 vec)
         {
-            int r = Math.Max(127 + (int)(vec.X * 128), 0);
-            int g = Math.Max(127 + (int)(vec.Y * 128), 0);
-            int b = Math.Max(127 + (int)(vec.Z * 128), 0);
+            Vector3 clampedVec = Vector3.Clamp(vec, Vector3.Zero, Vector3.One);
+
+            int r = Math.Max(127 + (int)(clampedVec.X * 128), 0);
+            int g = Math.Max(127 + (int)(clampedVec.Y * 128), 0);
+            int b = Math.Max(127 + (int)(clampedVec.Z * 128), 0);
 
             return Color.FromArgb(r, g, b);
         }
@@ -311,16 +313,10 @@ namespace GKproject3D
         {
             Vector3 finalColor = new Vector3(0, 0, 0);
 
-            Vector3 RGB = Material.Ka; // IA = 1
-
-
             Vector3 V_real = scene.Camera.Position - pixelPosition;
             Vector3 V = Vector3.Normalize(V_real);
-
-
-            // po wszystkich żródłach światłach
+            
             Vector3 diffSpec = Vector3.Zero;
-
             foreach(LightSource ls in scene.LightSources)
             {
                 if(ls.CheckIfPointIsLit(pixelPosition))
@@ -343,9 +339,8 @@ namespace GKproject3D
                 }
             }
 
-            float Ia = 0.0f;
-            finalColor = Material.Ka * Ia + diffSpec;
-
+            finalColor = (Material.Ka * scene.AmbientLight + diffSpec);
+            finalColor = Vector3.Lerp(finalColor, scene.Fog, V_real.LengthSquared() / 400.0f);
 
             return Vector3.Clamp(finalColor, Vector3.Zero, Vector3.One);
         }
@@ -385,12 +380,10 @@ namespace GKproject3D
                 // Y vec = [0,1,0]
                 Vector3 sideVector = Vector3.Cross(Vector3.UnitY, WorldFrontVec);
 
-
+                // car spotlight
                 scene.CarSpotlight.Move(WorldPosition + 0.5f* sideVector, WorldFrontVec);
 
-
-
-
+                // police light
                 Matrix4x4 rotationMatrix = Matrix4x4.CreateRotationY(scene.PoliceLightAngle, scene.PoliceLight.Position);
                 Vector3 newPoliceLightDirection = Vector3.TransformNormal(WorldFrontVec, rotationMatrix);
 

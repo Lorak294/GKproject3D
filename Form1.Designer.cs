@@ -90,6 +90,7 @@
             this.imageBox.Location = new System.Drawing.Point(3, 3);
             this.imageBox.Name = "imageBox";
             this.imageBox.Size = new System.Drawing.Size(752, 632);
+            this.imageBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.imageBox.TabIndex = 0;
             this.imageBox.TabStop = false;
             // 
@@ -372,6 +373,7 @@
             this.Controls.Add(this.tableLayoutPanel1);
             this.Name = "Form1";
             this.Text = "Form1";
+            this.SizeChanged += new System.EventHandler(this.Form1_SizeChanged);
             this.tableLayoutPanel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.imageBox)).EndInit();
             this.panel1.ResumeLayout(false);

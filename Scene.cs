@@ -32,11 +32,14 @@ namespace GKproject3D
 
         // lightsources
         public ShadingMode ShadingMode { get; set; }
-
+        public Vector3 AmbientLight { get; set; }
         public List<LightSource> LightSources { get; set; }
         public SpotLight CarSpotlight { get; set; }
 
         public SpotLight PoliceLight { get; set; }
+
+        // fog
+        public Vector3 Fog { get; set; }
 
 
         public Scene(Camera camera, Bitmap canvas, List<Object3D> objects, Object3D car,List<LightSource> lightSources, SpotLight carSpotlight,SpotLight policeLight, ShadingMode shadingMode = ShadingMode.Static, bool animationActive = false)
@@ -54,6 +57,9 @@ namespace GKproject3D
             PoliceLight = policeLight;
             ShadingMode = shadingMode;
             LightSources = lightSources;
+
+            AmbientLight = Vector3.One * 0.1f;
+            Fog = Vector3.One * 0.8f;
 
         }
 

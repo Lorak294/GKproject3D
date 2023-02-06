@@ -24,6 +24,8 @@ namespace GKproject3D
         public LockBitmap(Bitmap source)
         {
             this.source = source;
+            Width = source.Width;
+            Height = source.Height;
         }
 
         /// <summary>
