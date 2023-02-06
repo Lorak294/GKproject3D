@@ -319,28 +319,51 @@ namespace GKproject3D
 
 
             // po wszystkich żródłach światłach
+            Vector3 diffSpec = Vector3.Zero;
+
+            foreach(LightSource ls in scene.LightSources)
+            {
+                if(ls.CheckIfPointIsLit(pixelPosition))
+                {
+                    Vector3 L_real =ls.Position - pixelPosition;
+                    Vector3 L = Vector3.Normalize(L_real);
+                    float LN = Vector3.Dot(L, N);
+                    Vector3 R = Vector3.Normalize(2 * LN * N - L);
+
+                    Vector3 lsFactor = Material.Kd * LN * ls.Id + Material.Ks * (float)Math.Pow(Vector3.Dot(R, V), Material.Alpha) * ls.Is;
+
+                    // attenuation
+                    float Ac = 1;
+                    float Al = 0.04f;
+                    float Aq = 0.0016f;
+
+                    float If = 1 / (Ac + Al * L_real.Length() + Aq * L_real.LengthSquared());
+
+                    diffSpec += lsFactor * If;
+                }
+            }
 
             // candleLight
-            Vector3 L_real = scene.CandleLight.Position - pixelPosition;
-            Vector3 L = Vector3.Normalize(L_real);
-            float LN = Vector3.Dot(L, N);
-            Vector3 R = Vector3.Normalize(2 * LN * N - L);
+            //Vector3 L_real = scene.CandleLight.Position - pixelPosition;
+            //Vector3 L = Vector3.Normalize(L_real);
+            //float LN = Vector3.Dot(L, N);
+            //Vector3 R = Vector3.Normalize(2 * LN * N - L);
 
-            Vector3 candleFactor = Material.Kd * LN * scene.CandleLight.Id + Material.Ks * (float)Math.Pow(Vector3.Dot(R, V), Material.Alpha) * scene.CandleLight.Is;
+            //Vector3 candleFactor = Material.Kd * LN * scene.CandleLight.Id + Material.Ks * (float)Math.Pow(Vector3.Dot(R, V), Material.Alpha) * scene.CandleLight.Is;
 
             // attenuation
-            float Ac = 1;
-            float Al = 0.04f;
-            float Aq = 0.0016f;
+            //float Ac = 1;
+            //float Al = 0.04f;
+            //float Aq = 0.0016f;
 
-            float If = 1 / (Ac + Al * L_real.Length() + Aq * L_real.LengthSquared());
+            //float If = 1 / (Ac + Al * L_real.Length() + Aq * L_real.LengthSquared());
 
 
             float Ia = 0.1f;
-            finalColor = Material.Ka * Ia + candleFactor*If;
+            finalColor = Material.Ka * Ia + diffSpec;
 
 
-            return Vector3.Clamp(finalColor, new Vector3(0, 0, 0), new Vector3(1, 1, 1));
+            return Vector3.Clamp(finalColor, Vector3.Zero, Vector3.One);
         }
 
 
@@ -348,7 +371,6 @@ namespace GKproject3D
     public class Object3D
     {
         private List<Triangle> triangles;
-        private Color color;
         private Vector3 position;
         private Vector3 frontVec;
         public Vector3 WorldPosition { get; private set; }
@@ -356,13 +378,14 @@ namespace GKproject3D
         public Matrix4x4 modelMatrix { get; set; }
 
         // constructor
-        public Object3D(List<Triangle> triangles, Color c, Matrix4x4 modelMatrix)
+        public Object3D(List<Triangle> triangles, Matrix4x4 modelMatrix)
         {
             this.triangles = triangles;
-            this.color = c;
             this.modelMatrix = modelMatrix;
             position = triangles[0].Points[0].Position;
             frontVec = new Vector3(0,0,-1);
+            WorldPosition = Vector3.Transform(position, modelMatrix);
+            WorldFrontVec = Vector3.TransformNormal(frontVec, modelMatrix);
         }
 
         // DRAW
@@ -372,6 +395,23 @@ namespace GKproject3D
             v4Pos = Vector4.Transform(v4Pos, modelMatrix);
             WorldPosition = new Vector3(v4Pos.X, v4Pos.Y, v4Pos.Z);
             WorldFrontVec = Vector3.TransformNormal(frontVec, modelMatrix);
+
+            if (this == scene.Car)
+            {
+                // Y vec = [0,1,0]
+                Vector3 sideVector = Vector3.Cross(Vector3.UnitY, WorldFrontVec);
+
+
+                scene.CarSpotlight.Move(WorldPosition + 0.5f* sideVector, WorldFrontVec);
+
+
+
+
+                Matrix4x4 rotationMatrix = Matrix4x4.CreateRotationY(scene.PoliceLightAngle, scene.PoliceLight.Position);
+                Vector3 newPoliceLightDirection = Vector3.TransformNormal(WorldFrontVec, rotationMatrix);
+
+                scene.PoliceLight.Move(WorldPosition + 0.5f * sideVector - 0.9f*WorldFrontVec + 0.9f*Vector3.UnitY, newPoliceLightDirection);
+            }
 
             foreach (Triangle t in triangles)
             {

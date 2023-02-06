@@ -8,11 +8,11 @@ namespace GKproject3D
     public partial class Form1 : Form
     {
         private const int FOV_DEGREES = 90;
+        private const int SPOTLIGHT_ANGLE = 45;
 
         private List<Object3D> objects;
         Object3D car = null!;
         private Camera camera;
-        private LightSource candleLight;
 
         private Scene scene;
         public Form1()
@@ -23,11 +23,7 @@ namespace GKproject3D
             animationStartBtn.Enabled = true;
             animationStopBtn.Enabled = false;
 
-            candleLight = new LightSource(new Vector3(0.012919f, 1.9f, -6.139567f),0.5f,0.5f);
-
-
-
-            objects = new List<Object3D>();
+            // camera
             camera = new Camera(
                 new Vector3(5, 5, 5), 
                 new Vector3(0.0f, 0.0f, 0.0f), 
@@ -44,10 +40,25 @@ namespace GKproject3D
             yTargetBox.Text = camera.Target.Y.ToString();
             zTargetBox.Text = camera.Target.Z.ToString();
 
+            // objects
+            objects = new List<Object3D>();
             ImportScene("../../../objects/objectsWithMaterials/scene.obj");
 
+            // lightSources
+            List<LightSource> lightsSources = new List<LightSource>();
+            //  candle light
+            //candleLight = new LightSource(new Vector3(0.012919f, 1.9f, -6.139567f), 0.5f, 0.5f);
+            lightsSources.Add(new LightSource(new Vector3(0.012919f, 1.9f, -6.139567f), 0.5f, 0.5f));
+            // car spotlight
+            SpotLight carSpotlight = new SpotLight(car.WorldPosition, 0.5f, 0.5f, car.WorldFrontVec, (float)Math.Cos((Math.PI / 180) * SPOTLIGHT_ANGLE));
+            lightsSources.Add(carSpotlight);
+            // police light spotlight
+            SpotLight policeLight = new SpotLight(car.WorldPosition, 0.5f, 0.5f, car.WorldFrontVec, (float)Math.Cos((Math.PI / 180) * SPOTLIGHT_ANGLE));
+            lightsSources.Add(policeLight);
 
-            scene = new Scene(camera, (Bitmap)imageBox.Image, objects, car, candleLight);
+
+
+            scene = new Scene(camera, (Bitmap)imageBox.Image, objects, car,lightsSources,carSpotlight, policeLight);
 
             renderScene();
         }
@@ -69,6 +80,45 @@ namespace GKproject3D
                 obj.Draw(scene, viewM, projectionM);
             }
             scene.LockBitmap.UnlockBits();
+
+
+
+
+            // lightSource
+            using(Graphics g = Graphics.FromImage(imageBox.Image))
+            {
+
+                        Vector4 v4 = new Vector4(scene.CarSpotlight.Position, 1);
+                        v4 = Vector4.Transform(v4, viewM);
+                        v4 = Vector4.Transform(v4, projectionM);
+
+                        Vector3 NDCPosition = new Vector3(v4.X / v4.W, v4.Y / v4.W, v4.Z / v4.W);
+
+
+                       Vector3 ScreenPosition = new Vector3(
+                            (float)Math.Round((NDCPosition.X + 1) * scene.LockBitmap.Width / 2),
+                            (float)Math.Round((1 - NDCPosition.Y) * scene.LockBitmap.Height / 2),
+                            (NDCPosition.Z + 1) / 2);
+
+                g.DrawEllipse(Pens.Red, ScreenPosition.X, ScreenPosition.Y, 10, 10);
+
+
+                v4 = new Vector4(scene.PoliceLight.Position, 1);
+                v4 = Vector4.Transform(v4, viewM);
+                v4 = Vector4.Transform(v4, projectionM);
+
+                NDCPosition = new Vector3(v4.X / v4.W, v4.Y / v4.W, v4.Z / v4.W);
+
+
+                ScreenPosition = new Vector3(
+                     (float)Math.Round((NDCPosition.X + 1) * scene.LockBitmap.Width / 2),
+                     (float)Math.Round((1 - NDCPosition.Y) * scene.LockBitmap.Height / 2),
+                     (NDCPosition.Z + 1) / 2);
+
+                g.DrawEllipse(Pens.Green, ScreenPosition.X, ScreenPosition.Y, 10, 10);
+            }
+
+
             imageBox.Refresh();
         }
 
@@ -102,8 +152,8 @@ namespace GKproject3D
         {
             // experimental
             scene.CarAnimationAngle += 0.2f;
+            scene.PoliceLightAngle += 0.2f;
             Matrix4x4 carModelM =  Matrix4x4.CreateRotationY(scene.CarAnimationAngle);
-
             scene.Car.modelMatrix = carModelM;
         }
 
@@ -229,7 +279,7 @@ namespace GKproject3D
                     }
 
                     // marking CAR as special object
-                    objects.Add(new Object3D(trigList, Color.AliceBlue, Matrix4x4.Identity));
+                    objects.Add(new Object3D(trigList, Matrix4x4.Identity));
                     if(name == "Car")
                     {
                         car = objects.Last();

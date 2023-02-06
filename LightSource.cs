@@ -21,5 +21,39 @@ namespace GKproject3D
             Id = iD;
         }
 
+        public virtual bool CheckIfPointIsLit(Vector3 point)
+        {
+            return true;
+        }
+
+    }
+
+    public class SpotLight : LightSource
+    {
+        public Vector3 LightDirection { get; set; }
+        public float CutOffAngle { get; set; }
+
+        public SpotLight(Vector3 position, float iS, float iD, Vector3 lightDirection, float cutoffAngle) : base(position,iS,iD)
+        {
+            LightDirection = lightDirection;
+            CutOffAngle = cutoffAngle;
+        }
+
+
+        public override bool CheckIfPointIsLit(Vector3 point)
+        {
+            Vector3 pointVersor = Vector3.Normalize(point - Position);
+
+            float alpha = Vector3.Dot(pointVersor, LightDirection);
+
+            return alpha >= CutOffAngle;
+        }
+
+        public void Move(Vector3 newPosition, Vector3 newLightDirection)
+        {
+            Position = newPosition;
+            LightDirection = newLightDirection;
+        }
+
     }
 }

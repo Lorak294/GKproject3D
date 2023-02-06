@@ -28,24 +28,33 @@ namespace GKproject3D
         // animation
         public bool AnimationActive { get; set; }
         public float CarAnimationAngle { get; set; }
+        public float PoliceLightAngle { get; set; }
 
         // lightsources
         public ShadingMode ShadingMode { get; set; }
-        public LightSource CandleLight { get; set; }
+
+        public List<LightSource> LightSources { get; set; }
+        public SpotLight CarSpotlight { get; set; }
+
+        public SpotLight PoliceLight { get; set; }
 
 
-        public Scene(Camera camera, Bitmap canvas, List<Object3D> objects, Object3D car, LightSource candleLight,ShadingMode shadingMode = ShadingMode.Static, bool animationActive = false)
+        public Scene(Camera camera, Bitmap canvas, List<Object3D> objects, Object3D car,List<LightSource> lightSources, SpotLight carSpotlight,SpotLight policeLight, ShadingMode shadingMode = ShadingMode.Static, bool animationActive = false)
         {
             Zbuffer = new float[canvas.Width, canvas.Height];        
             LockBitmap = new LockBitmap(canvas);
             CarAnimationAngle = 0;
+            PoliceLightAngle = 0;
             
             Objects = objects;
             Car = car;
             AnimationActive = animationActive;
             Camera = camera; ;
-            CandleLight = candleLight;
+            CarSpotlight = carSpotlight;
+            PoliceLight = policeLight;
             ShadingMode = shadingMode;
+            LightSources = lightSources;
+
         }
 
         public void ResetZBuffer()
