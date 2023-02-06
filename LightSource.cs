@@ -14,9 +14,11 @@ namespace GKproject3D
         public float Is { get; set; }
         public float Id { get; set; }
         
-        public LightSource(Vector3 position)
+        public LightSource(Vector3 position, float iS, float iD)
         {
             Position = position;
+            Is = iS;
+            Id = iD;
         }
 
     }

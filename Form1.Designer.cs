@@ -125,6 +125,7 @@
             this.phongShadingRB.TabIndex = 2;
             this.phongShadingRB.Text = "Phong";
             this.phongShadingRB.UseVisualStyleBackColor = true;
+            this.phongShadingRB.CheckedChanged += new System.EventHandler(this.ShadingRBtn_CheckedChanged);
             // 
             // gouraudShadingRB
             // 
@@ -135,6 +136,7 @@
             this.gouraudShadingRB.TabIndex = 1;
             this.gouraudShadingRB.Text = "Gouraud";
             this.gouraudShadingRB.UseVisualStyleBackColor = true;
+            this.gouraudShadingRB.CheckedChanged += new System.EventHandler(this.ShadingRBtn_CheckedChanged);
             // 
             // staticShadingRB
             // 
@@ -147,6 +149,7 @@
             this.staticShadingRB.TabStop = true;
             this.staticShadingRB.Text = "Static";
             this.staticShadingRB.UseVisualStyleBackColor = true;
+            this.staticShadingRB.CheckedChanged += new System.EventHandler(this.ShadingRBtn_CheckedChanged);
             // 
             // groupBox2
             // 
@@ -323,6 +326,7 @@
             this.followingCameraRBtn.TabStop = true;
             this.followingCameraRBtn.Text = "Follow the car";
             this.followingCameraRBtn.UseVisualStyleBackColor = true;
+            this.followingCameraRBtn.CheckedChanged += new System.EventHandler(this.CameraRBtn_CheckedChanged);
             // 
             // groupBox1
             // 

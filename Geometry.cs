@@ -11,6 +11,7 @@ using System.Runtime.Intrinsics;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using System.Diagnostics;
+using System.CodeDom;
 
 namespace GKproject3D
 {
@@ -19,16 +20,30 @@ namespace GKproject3D
     {
         public Vector3 Position { get; set; }
         public Vector3 Normal { get; set; }
+        public Vector3 ShadingColor { get; set; }
+        public Vector3 WorldPosition { get; set; }
 
-        public ScanlinePoint3D(Vector3 pos, Vector3 norm)
+        public ScanlinePoint3D(Vector3 pos, Vector3 norm, Vector3 shadingColor, Vector3 worldPosition)
         {
             Position = pos;
             Normal = norm;
+            ShadingColor = shadingColor;
+            WorldPosition = worldPosition;
         }
 
         public ScanlinePoint3D Copy()
         {
-            return new ScanlinePoint3D(Position, Normal);
+            return new ScanlinePoint3D(Position, Normal, ShadingColor, WorldPosition);
+        }
+
+        public static ScanlinePoint3D operator+(ScanlinePoint3D a, ScanlinePoint3D b)
+        {
+            return new ScanlinePoint3D(
+                a.Position + b.Position, 
+                a.Normal + b.Normal, 
+                a.ShadingColor + b.ShadingColor, 
+                a.WorldPosition + b.WorldPosition
+                );
         }
 
     }
@@ -100,9 +115,18 @@ namespace GKproject3D
         public void FillOut(Scene scene)
         {
             ScanlinePoint3D[] screenPoints = new ScanlinePoint3D[3];
+
+            Vector3 phongColor = CalcPhongLight(scene, Points[0].WorldPosition, Points[0].WorldNormal);
             for(int i=0; i< 3;i++)
             {
-                screenPoints[i] = new ScanlinePoint3D(Points[i].ScreenPosition, Points[i].WorldNormal);
+                if(scene.ShadingMode == ShadingMode.Static)
+                    screenPoints[i] = new ScanlinePoint3D(Points[i].ScreenPosition, Points[i].WorldNormal, phongColor, Points[i].WorldPosition);
+                else
+                    screenPoints[i] = new ScanlinePoint3D(
+                        Points[i].ScreenPosition, 
+                        Points[i].WorldNormal, 
+                        CalcPhongLight(scene, Points[i].WorldPosition, Points[i].WorldNormal), 
+                        Points[i].WorldPosition);
             }
 
             // order verts ascending by Y than ascending by X
@@ -133,11 +157,19 @@ namespace GKproject3D
             // p0.Y == p1.Y and p0.X <= p1.X
 
             float dy = screenPoints[2].Position.Y - screenPoints[0].Position.Y;
+            ScanlinePoint3D step0 = new ScanlinePoint3D(
+                (screenPoints[2].Position - screenPoints[0].Position) / dy,
+                (screenPoints[2].Normal - screenPoints[0].Normal) / dy,
+                (screenPoints[2].ShadingColor - screenPoints[0].ShadingColor) / dy,
+                (screenPoints[2].WorldPosition - screenPoints[0].WorldPosition) / dy
+                );
 
-            Vector3 positionStep0 = (screenPoints[2].Position - screenPoints[0].Position) / dy;
-            Vector3 positionStep1 = (screenPoints[2].Position - screenPoints[1].Position) / dy;
-            Vector3 normalStep0 = (screenPoints[2].Normal - screenPoints[0].Normal) / dy;
-            Vector3 normalStep1 = (screenPoints[2].Normal - screenPoints[1].Normal) / dy;
+            ScanlinePoint3D step1 = new ScanlinePoint3D(
+                (screenPoints[2].Position - screenPoints[1].Position) / dy,
+                (screenPoints[2].Normal - screenPoints[1].Normal) / dy,
+                (screenPoints[2].ShadingColor - screenPoints[1].ShadingColor) / dy,
+                (screenPoints[2].WorldPosition - screenPoints[1].WorldPosition) / dy
+            );
 
             ScanlinePoint3D edge0point = screenPoints[0].Copy();
             ScanlinePoint3D edge1point = screenPoints[1].Copy();
@@ -153,11 +185,9 @@ namespace GKproject3D
                 if (scanlineY >= 0)
                     FillScanline(edge0point, edge1point, scanlineY, scene);
 
-                // update values forn next iteration
-                edge0point.Position += positionStep0;
-                edge1point.Position += positionStep1;
-                edge0point.Normal += normalStep0;
-                edge1point.Normal += normalStep1;
+                // apply steps
+                edge0point += step0;
+                edge1point += step1;
 
             }
         }
@@ -168,15 +198,24 @@ namespace GKproject3D
             float dy1 = screenPoints[1].Position.Y - screenPoints[0].Position.Y;
             float dy2 = screenPoints[2].Position.Y - screenPoints[0].Position.Y;
 
+            ScanlinePoint3D step1 = new ScanlinePoint3D(
+                (screenPoints[1].Position - screenPoints[0].Position) / dy1,
+                (screenPoints[1].Normal - screenPoints[0].Normal) / dy1,
+                (screenPoints[1].ShadingColor - screenPoints[0].ShadingColor) / dy1,
+                (screenPoints[1].WorldPosition - screenPoints[0].WorldPosition) / dy1
+                );
+
+            ScanlinePoint3D step2 = new ScanlinePoint3D(
+                (screenPoints[2].Position - screenPoints[0].Position) / dy2,
+                (screenPoints[2].Normal - screenPoints[0].Normal) / dy2,
+                (screenPoints[2].ShadingColor - screenPoints[0].ShadingColor) / dy2,
+                (screenPoints[2].WorldPosition - screenPoints[0].WorldPosition) / dy2
+            );
+
             ScanlinePoint3D edgePoint1 = screenPoints[0].Copy();
             ScanlinePoint3D edgePoint2 = screenPoints[0].Copy();
 
-            Vector3 positionStep1 = (screenPoints[1].Position - screenPoints[0].Position) / dy1;
-            Vector3 positionStep2 = (screenPoints[2].Position - screenPoints[0].Position) / dy2;
-            Vector3 normalStep1 = (screenPoints[1].Normal - screenPoints[0].Normal) / dy1;
-            Vector3 normalStep2 = (screenPoints[2].Normal - screenPoints[0].Normal) / dy2;
-
-            bool leftSideP1 = positionStep1.X < positionStep2.X;
+            bool leftSideP1 = step1.Position.X < step2.Position.X;
 
             int lowY = (int)screenPoints[0].Position.Y;
             int topY = (int)Math.Round(screenPoints[1].Position.Y);
@@ -194,10 +233,8 @@ namespace GKproject3D
                         FillScanline(edgePoint2, edgePoint1, scanlineY, scene);
                 }
                 // appply steps
-                edgePoint1.Position += positionStep1;
-                edgePoint1.Normal += normalStep1;
-                edgePoint2.Position += positionStep2;
-                edgePoint2.Normal += normalStep2;
+                edgePoint1 += step1;
+                edgePoint2 += step2;
             }
 
             if (screenPoints[1].Position.Y == screenPoints[2].Position.Y)
@@ -206,8 +243,13 @@ namespace GKproject3D
 
             // top half
             dy1 = screenPoints[2].Position.Y - screenPoints[1].Position.Y;
-            positionStep1 = (screenPoints[2].Position - screenPoints[1].Position) / dy1;
-            normalStep1 = (screenPoints[2].Normal - screenPoints[1].Normal) / dy1;
+
+            step1 = new ScanlinePoint3D(
+                (screenPoints[2].Position - screenPoints[1].Position) / dy1,
+                (screenPoints[2].Normal - screenPoints[1].Normal) / dy1,
+                (screenPoints[2].ShadingColor - screenPoints[1].ShadingColor) / dy1,
+                (screenPoints[2].WorldPosition - screenPoints[1].WorldPosition) / dy1
+                );
 
             topY = (int)Math.Round(screenPoints[2].Position.Y);
 
@@ -226,37 +268,36 @@ namespace GKproject3D
                         FillScanline(edgePoint2, edgePoint1, scanlineY, scene);
                 }
                 // appply steps
-                edgePoint1.Position += positionStep1;
-                edgePoint1.Normal += normalStep1;
-                edgePoint2.Position += positionStep2;
-                edgePoint2.Normal += normalStep2;
+                edgePoint1 += step1;
+                edgePoint2 += step2;
             }
         }
         public void FillScanline(ScanlinePoint3D leftPoint, ScanlinePoint3D rightPoint, int y, Scene scene)
         {
-            // ADD INTERPOLATION 
-            Color c = Color.Red;
-
             float dx = rightPoint.Position.X - leftPoint.Position.X;
-            float zStep = (rightPoint.Position.Z - leftPoint.Position.Z) / dx;
-            Vector3 normStep = (rightPoint.Normal - leftPoint.Normal) / dx;
-            
-            float zBuff = leftPoint.Position.Z;
-            Vector3 normVec = leftPoint.Normal;
+            ScanlinePoint3D step = new ScanlinePoint3D(
+                (rightPoint.Position - leftPoint.Position) / dx,
+                (rightPoint.Normal - leftPoint.Normal) / dx,
+                (rightPoint.ShadingColor - leftPoint.ShadingColor) / dx,
+                (rightPoint.WorldPosition - leftPoint.WorldPosition) / dx
+            );
+
+            ScanlinePoint3D drawPoint = leftPoint.Copy();
             for (int x = (int)Math.Max(0, leftPoint.Position.X); x < Math.Min(rightPoint.Position.X, scene.LockBitmap.Width); x++)
             {
-                if (scene.Zbuffer[x, y] > zBuff)
+                if (scene.Zbuffer[x, y] > drawPoint.Position.Z)
                 {
-                    //lockBitmap.SetPixel(x, y, NormalVectorToColor(Vector3.Normalize(normVec)));
-                    scene.LockBitmap.SetPixel(x, y, VectorToColor(this.Material.Kd));
-                    scene.Zbuffer[x, y] = zBuff;
+                    if (scene.ShadingMode == ShadingMode.Phong)
+                        scene.LockBitmap.SetPixel(x, y, VectorToColor(CalcPhongLight(scene,drawPoint.WorldPosition,drawPoint.Normal)));
+                    else
+                        scene.LockBitmap.SetPixel(x, y, VectorToColor(drawPoint.ShadingColor));
+
+                    scene.Zbuffer[x, y] = drawPoint.Position.Z;
                 }
-                zBuff += zStep;
-                normVec += normStep;
+                drawPoint += step;
             }
         }
-
-        //// DELETE THIS LATER
+        
         public static Color VectorToColor(Vector3 vec)
         {
             int r = Math.Max(127 + (int)(vec.X * 128), 0);
@@ -266,30 +307,40 @@ namespace GKproject3D
             return Color.FromArgb(r, g, b);
         }
 
-        public Color CalcPhongLight(Scene scene, Vector3 pixelPosition, Vector3 N)
+        public Vector3 CalcPhongLight(Scene scene, Vector3 pixelPosition, Vector3 N)
         {
             Vector3 finalColor = new Vector3(0, 0, 0);
 
             Vector3 RGB = Material.Ka; // IA = 1
 
 
-            Vector3 V = Vector3.Normalize(scene.Camera.Position - pixelPosition);
+            Vector3 V_real = scene.Camera.Position - pixelPosition;
+            Vector3 V = Vector3.Normalize(V_real);
 
 
             // po wszystkich żródłach światłach
 
             // candleLight
-            Vector3 L = Vector3.Normalize(scene.CandleLight.Position - pixelPosition);
+            Vector3 L_real = scene.CandleLight.Position - pixelPosition;
+            Vector3 L = Vector3.Normalize(L_real);
             float LN = Vector3.Dot(L, N);
-            Vector3 R = 2 * LN * N - L;
+            Vector3 R = Vector3.Normalize(2 * LN * N - L);
 
-            Vector3 candleFactor = Material.Kd * Vector3.Dot(L, N) * scene.CandleLight.Id + Material.Ks * (float)Math.Pow(Vector3.Dot(R, V), Material.Alpha) * scene.CandleLight.Is;
+            Vector3 candleFactor = Material.Kd * LN * scene.CandleLight.Id + Material.Ks * (float)Math.Pow(Vector3.Dot(R, V), Material.Alpha) * scene.CandleLight.Is;
+
+            // attenuation
+            float Ac = 1;
+            float Al = 0.04f;
+            float Aq = 0.0016f;
+
+            float If = 1 / (Ac + Al * L_real.Length() + Aq * L_real.LengthSquared());
 
 
-            float Ia = 1;
-            finalColor = Material.Ka * Ia + candleFactor;
+            float Ia = 0.1f;
+            finalColor = Material.Ka * Ia + candleFactor*If;
 
-            return VectorToColor(finalColor);
+
+            return Vector3.Clamp(finalColor, new Vector3(0, 0, 0), new Vector3(1, 1, 1));
         }
 
 

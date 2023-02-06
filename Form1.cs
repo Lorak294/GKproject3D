@@ -23,7 +23,7 @@ namespace GKproject3D
             animationStartBtn.Enabled = true;
             animationStopBtn.Enabled = false;
 
-            candleLight = new LightSource(new Vector3(0,40,0));
+            candleLight = new LightSource(new Vector3(0.012919f, 1.9f, -6.139567f),0.5f,0.5f);
 
 
 
@@ -141,6 +141,17 @@ namespace GKproject3D
                 scene.Camera.Mode = CameraMode.Behind;
 
             UpdateCameraPos();
+            renderScene();
+        }
+
+        private void ShadingRBtn_CheckedChanged(object sender, EventArgs e)
+        {
+            if (staticShadingRB.Checked)
+                scene.ShadingMode = ShadingMode.Static;
+            else if (gouraudShadingRB.Checked)
+                scene.ShadingMode = ShadingMode.Gouraud;
+            else
+                scene.ShadingMode = ShadingMode.Phong;
             renderScene();
         }
 
@@ -357,7 +368,6 @@ namespace GKproject3D
             fs.Close();
             return materials;
         }
-
 
     }
 }

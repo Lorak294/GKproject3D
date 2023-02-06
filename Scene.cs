@@ -7,6 +7,12 @@ using System.Threading.Tasks;
 
 namespace GKproject3D
 {
+    public enum ShadingMode
+    {
+        Static,
+        Gouraud,
+        Phong
+    }
     public class Scene
     {
         public Camera Camera { get; set; }
@@ -24,10 +30,11 @@ namespace GKproject3D
         public float CarAnimationAngle { get; set; }
 
         // lightsources
+        public ShadingMode ShadingMode { get; set; }
         public LightSource CandleLight { get; set; }
 
 
-        public Scene(Camera camera, Bitmap canvas, List<Object3D> objects, Object3D car, LightSource candleLight, bool animationActive = false)
+        public Scene(Camera camera, Bitmap canvas, List<Object3D> objects, Object3D car, LightSource candleLight,ShadingMode shadingMode = ShadingMode.Static, bool animationActive = false)
         {
             Zbuffer = new float[canvas.Width, canvas.Height];        
             LockBitmap = new LockBitmap(canvas);
@@ -38,6 +45,7 @@ namespace GKproject3D
             AnimationActive = animationActive;
             Camera = camera; ;
             CandleLight = candleLight;
+            ShadingMode = shadingMode;
         }
 
         public void ResetZBuffer()
