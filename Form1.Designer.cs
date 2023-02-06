@@ -372,7 +372,7 @@
             this.ClientSize = new System.Drawing.Size(1060, 638);
             this.Controls.Add(this.tableLayoutPanel1);
             this.Name = "Form1";
-            this.Text = "Form1";
+            this.Text = "Car in the woods";
             this.SizeChanged += new System.EventHandler(this.Form1_SizeChanged);
             this.tableLayoutPanel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.imageBox)).EndInit();
