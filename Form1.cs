@@ -48,12 +48,15 @@ namespace GKproject3D
             List<LightSource> lightsSources = new List<LightSource>();
             //  candle light
             //candleLight = new LightSource(new Vector3(0.012919f, 1.9f, -6.139567f), 0.5f, 0.5f);
-            lightsSources.Add(new LightSource(new Vector3(0.012919f, 1.9f, -6.139567f), 0.5f, 0.5f));
+
+
+
+            lightsSources.Add(new LightSource(new Vector3(0.012919f, 1.9f, -6.139567f),Vector3.One*0.5f, Vector3.One * 0.5f));
             // car spotlight
-            SpotLight carSpotlight = new SpotLight(car.WorldPosition, 0.5f, 0.5f, car.WorldFrontVec, (float)Math.Cos((Math.PI / 180) * SPOTLIGHT_ANGLE));
+            SpotLight carSpotlight = new SpotLight(car.WorldPosition, Vector3.One, Vector3.One, car.WorldFrontVec, (float)Math.Cos((Math.PI / 180) * SPOTLIGHT_ANGLE));
             lightsSources.Add(carSpotlight);
             // police light spotlight
-            SpotLight policeLight = new SpotLight(car.WorldPosition, 0.5f, 0.5f, car.WorldFrontVec, (float)Math.Cos((Math.PI / 180) * SPOTLIGHT_ANGLE));
+            SpotLight policeLight = new SpotLight(car.WorldPosition, Vector3.UnitZ, Vector3.UnitZ, car.WorldFrontVec, (float)Math.Cos((Math.PI / 180) * SPOTLIGHT_ANGLE));
             lightsSources.Add(policeLight);
 
 

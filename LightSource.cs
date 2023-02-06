@@ -10,11 +10,10 @@ namespace GKproject3D
     public class LightSource
     {
         public Vector3 Position { get; set; }
-
-        public float Is { get; set; }
-        public float Id { get; set; }
+        public Vector3 Id { get; set; }
+        public Vector3 Is { get; set; }
         
-        public LightSource(Vector3 position, float iS, float iD)
+        public LightSource(Vector3 position, Vector3 iS, Vector3 iD)
         {
             Position = position;
             Is = iS;
@@ -33,7 +32,7 @@ namespace GKproject3D
         public Vector3 LightDirection { get; set; }
         public float CutOffAngle { get; set; }
 
-        public SpotLight(Vector3 position, float iS, float iD, Vector3 lightDirection, float cutoffAngle) : base(position,iS,iD)
+        public SpotLight(Vector3 position, Vector3 iS, Vector3 iD, Vector3 lightDirection, float cutoffAngle) : base(position,iS,iD)
         {
             LightDirection = lightDirection;
             CutOffAngle = cutoffAngle;

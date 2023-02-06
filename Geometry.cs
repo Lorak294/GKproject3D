@@ -343,23 +343,7 @@ namespace GKproject3D
                 }
             }
 
-            // candleLight
-            //Vector3 L_real = scene.CandleLight.Position - pixelPosition;
-            //Vector3 L = Vector3.Normalize(L_real);
-            //float LN = Vector3.Dot(L, N);
-            //Vector3 R = Vector3.Normalize(2 * LN * N - L);
-
-            //Vector3 candleFactor = Material.Kd * LN * scene.CandleLight.Id + Material.Ks * (float)Math.Pow(Vector3.Dot(R, V), Material.Alpha) * scene.CandleLight.Is;
-
-            // attenuation
-            //float Ac = 1;
-            //float Al = 0.04f;
-            //float Aq = 0.0016f;
-
-            //float If = 1 / (Ac + Al * L_real.Length() + Aq * L_real.LengthSquared());
-
-
-            float Ia = 0.1f;
+            float Ia = 0.0f;
             finalColor = Material.Ka * Ia + diffSpec;
 
 
