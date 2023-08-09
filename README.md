@@ -2,11 +2,11 @@
 
 This project is an Winforms application which has been made to demonstrate various computer graphics alghorithms. 
 It computes a simple scene with complex lighting. Application renders an animation of a driving car in a foggy woods. The UI enables user to configure different camera positions, 
-lighting modes and other parameters udsed in computations. 
+lighting modes and other rendering parameters. 
 
 ## Running the application
 
-After cloning repository just build project using visual studio and run the application. 
+After cloning repository just build the project using visual studio and run the application. 
 NOTE: running application in debug mode may result in considerably lower framerate.
 
 ## Application UI
